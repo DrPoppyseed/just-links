@@ -1,0 +1,22 @@
+[package]
+name = "just-links-api"
+version = "0.0.0"
+edition = "2021"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+tokio = { version = "1", features = ["full"] }
+nanoid = "0.4"
+anyhow = "1"
+dotenvy = "0.15"
+rand = "0.8"
+
+axum = { version = "0.6", features = ["headers", "macros"] }
+tower = "0.4"
+tower-http = { version = "0.4", features = ["cors", "timeout", "trace"] }
+async-session = "3.0.0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+pockety = { path = "../../pockety/pockety" }
+rocket_firebase_auth = { git = "https://github.com/DrPoppyseed/rocket-firebase-auth.git", branch = "main" }

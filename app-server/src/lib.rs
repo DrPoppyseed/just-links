@@ -1,7 +1,7 @@
 use async_session::{async_trait, MemoryStore, SessionStore};
 use axum::{
     extract::{rejection::TypedHeaderRejectionReason, FromRef, FromRequestParts},
-    headers,
+    headers::{self},
     http::{request::Parts, HeaderMap, StatusCode},
     response::{IntoResponse, Response},
     Json,
@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 pub mod api;
 pub mod error;
 
-pub static COOKIE_NAME: &str = "POCKETY_AUTH";
+pub static COOKIE_NAME: &str = "ID";
 
 pub type ApiResult<R> = std::result::Result<TypedResponse<R>, Error>;
 
@@ -27,6 +27,29 @@ where
     body: Option<B>,
     headers: Option<HeaderMap>,
     status_code: StatusCode,
+}
+
+impl<B> TypedResponse<B>
+where
+    B: Serialize,
+{
+    fn new(body: Option<B>) -> Self {
+        TypedResponse {
+            body,
+            ..Default::default()
+        }
+    }
+
+    fn headers(self, headers: Option<HeaderMap>) -> Self {
+        Self { headers, ..self }
+    }
+
+    fn status_code(self, status_code: StatusCode) -> Self {
+        Self {
+            status_code,
+            ..self
+        }
+    }
 }
 
 impl<B> Default for TypedResponse<B>
@@ -74,10 +97,11 @@ impl FromRef<AppState> for MemoryStore {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct SessionData {
-    session_id: String,
-    access_token: String,
+    request_token: Option<String>,
+    access_token: Option<String>,
+    username: Option<String>,
 }
 
 #[async_trait]
@@ -92,6 +116,8 @@ where
         parts: &mut Parts,
         state: &S,
     ) -> std::result::Result<Self, Self::Rejection> {
+        tracing::debug!("start request");
+
         let store = MemoryStore::from_ref(state);
 
         let cookies = parts
@@ -99,10 +125,16 @@ where
             .await
             .map_err(|e| match e.reason() {
                 TypedHeaderRejectionReason::Missing => {
+                    tracing::debug!("missing Cookie header");
                     Error::Cookie("missing Cookie header".to_string())
                 }
-                _ => Error::Cookie("unexpected error getting Cookie header(s): {e}".to_string()),
+                _ => {
+                    tracing::error!("unexpected error getting Cookie header(s): {e}");
+                    Error::Cookie("unexpected error getting Cookie header(s): {e}".to_string())
+                }
             })?;
+
+        tracing::debug!("found cookies: {cookies:#?}");
 
         let session_cookie = cookies
             .get(COOKIE_NAME)

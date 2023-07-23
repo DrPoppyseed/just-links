@@ -50,6 +50,8 @@ impl From<axum::Error> for Error {
 
 impl IntoResponse for Error {
     fn into_response(self) -> Response {
+        tracing::error!("{self:#?}");
+
         let (status, error_message) = match self {
             Error::Cookie(_) => (StatusCode::BAD_REQUEST, "Unauthorized"),
             Error::Pockety(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Internal Server Error"),

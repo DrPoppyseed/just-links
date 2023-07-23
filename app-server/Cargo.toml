@@ -1,5 +1,5 @@
 [package]
-name = "just-links-api"
+name = "app-server"
 version = "0.0.0"
 edition = "2021"
 
@@ -19,4 +19,4 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 pockety = { path = "../../pockety/pockety" }
-rocket_firebase_auth = { git = "https://github.com/DrPoppyseed/rocket-firebase-auth.git", branch = "main" }
+futures = "0.3.28"

@@ -1,5 +1,9 @@
 use std::{env, net::SocketAddr};
 
+use app_server::{
+    api::{get_access_token, get_articles, get_request_token, get_session_info, health_check},
+    AppState,
+};
 use async_session::MemoryStore;
 use axum::{
     http::Method,
@@ -8,10 +12,6 @@ use axum::{
     Server,
 };
 use dotenvy::dotenv;
-use just_links_api::{
-    api::{get_access_token, get_articles, get_request_token, health_check},
-    AppState,
-};
 use pockety::Pockety;
 use rand::{thread_rng, RngCore};
 use tower_http::{cors::CorsLayer, trace};
@@ -22,7 +22,8 @@ async fn main() {
     dotenv().expect(".env file not found");
 
     tracing_subscriber::fmt()
-        .with_target(false)
+        .with_max_level(tracing::Level::DEBUG)
+        .with_env_filter("app_server=debug")
         .compact()
         .init();
 
@@ -31,27 +32,34 @@ async fn main() {
     thread_rng()
         .try_fill_bytes(&mut secret)
         .expect("Failed to generate secret");
+
     let cors_layer = CorsLayer::new()
         .allow_origin([
             "http://localhost:5173".parse().unwrap(),
+            "http://127.0.0.1:5173".parse().unwrap(),
             "https://getpocket.com".parse().unwrap(),
         ])
-        .allow_headers(["content-type".parse().unwrap()])
+        .allow_headers([
+            "Content-Type".parse().unwrap(),
+            "Authorization".parse().unwrap(),
+        ])
         .allow_methods([Method::GET, Method::POST])
         .allow_credentials(true);
 
-    let pockety = Pockety::new(
-        &env::var("POCKET_CONSUMER_KEY").expect("Missing POCKET_CONSUMER_KEY"),
-        &env::var("POCKET_REDIRECT_URI").expect("Missing POCKET_REDIRECT_URI"),
-    );
+    let pocket_consumer_key = env::var("POCKET_CONSUMER_KEY").expect("Missing POCKET_CONSUMER_KEY");
+    let pocket_redirect_uri = env::var("POCKET_REDIRECT_URI").expect("Missing POCKET_REDIRECT_URI");
+    tracing::debug!("Initializing Pockety instance with consumer_key: {pocket_consumer_key} and redirect_uri: {pocket_redirect_uri}.");
+
+    let pockety = Pockety::new(pocket_consumer_key, &pocket_redirect_uri);
 
     let app_state = AppState { pockety, store };
 
     let app = Router::new()
-        .route("/", get(health_check))
+        .route("/health-check", get(health_check))
         .route("/articles", get(get_articles))
-        .route("/auth/pocket", post(get_request_token))
-        .route("/auth/authorize", post(get_access_token))
+        .route("/session-info", get(get_session_info))
+        .route("/auth/authn", post(get_request_token))
+        .route("/auth/authz", post(get_access_token))
         .layer(cors_layer)
         .layer(
             trace::TraceLayer::new_for_http()

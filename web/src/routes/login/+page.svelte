@@ -2,9 +2,8 @@
   import { goto } from "$app/navigation";
   import { onMount } from "svelte";
   import axios from "axios";
-    import { session } from "../store";
+  import { session } from "../store";
 
-  let token: string | null = null;
   let loading = false;
 
   onMount(async () => {
@@ -17,7 +16,7 @@
     loading = false;
     if (res.status === 200 && res.data.username) {
       $session.isLoggedIn = true;
-      $session.username = res.data.username
+      $session.username = res.data.username;
       goto("/", { replaceState: true });
     } else {
       console.error(

@@ -3,6 +3,7 @@ use std::{env, net::SocketAddr};
 use app_server::{
     api::{get_access_token, get_articles, get_request_token, get_session_info, health_check},
     AppState,
+    Config,
 };
 use async_session::MemoryStore;
 use axum::{
@@ -11,9 +12,9 @@ use axum::{
     Router,
     Server,
 };
+use biscuit::{jwk::JWK, Empty};
 use dotenvy::dotenv;
 use pockety::Pockety;
-use rand::{thread_rng, RngCore};
 use tower_http::{cors::CorsLayer, trace};
 use tracing::Level;
 
@@ -27,11 +28,20 @@ async fn main() {
         .compact()
         .init();
 
+    let jws_signing_secret = env::var("JWS_SIGNING_SECRET").expect("Missing JWS_SIGNING_SECRET");
+    let jwe_encryption_key: JWK<Empty> = JWK::new_octet_key(
+        &env::var("JWE_ENCRYPTION_KEY")
+            .expect("Missing JWE_ENCRYPTION_KEY")
+            .as_bytes(),
+        Default::default(),
+    );
+
+    let config = Config {
+        jws_signing_secret,
+        jwe_encryption_key,
+    };
+
     let store = MemoryStore::new();
-    let mut secret = [0; 64];
-    thread_rng()
-        .try_fill_bytes(&mut secret)
-        .expect("Failed to generate secret");
 
     let cors_layer = CorsLayer::new()
         .allow_origin([
@@ -52,7 +62,11 @@ async fn main() {
 
     let pockety = Pockety::new(pocket_consumer_key, &pocket_redirect_uri);
 
-    let app_state = AppState { pockety, store };
+    let app_state = AppState {
+        pockety,
+        store,
+        config,
+    };
 
     let app = Router::new()
         .route("/health-check", get(health_check))

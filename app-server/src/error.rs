@@ -8,8 +8,9 @@ use axum::{
 #[derive(Debug, Clone)]
 pub enum Error {
     Cookie(String),
-    Pockety(String),
-    Axum(String),
+    Pocket(String),
+    Internal(String),
+    BadRequest(String),
 }
 
 impl std::error::Error for Error {}
@@ -17,16 +18,17 @@ impl std::error::Error for Error {}
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Error::Cookie(message) => write!(f, "Cookie error: {message}"),
-            Error::Pockety(message) => write!(f, "Pockety error: {message}"),
-            Error::Axum(message) => write!(f, "Axum error: {message}"),
+            Error::Cookie(message) => write!(f, "error: {message}"),
+            Error::Pocket(message) => write!(f, "error: {message}"),
+            Error::Internal(message) => write!(f, "error: {message}"),
+            Error::BadRequest(message) => write!(f, "error: {message}"),
         }
     }
 }
 
 impl From<pockety::Error> for Error {
     fn from(error: pockety::Error) -> Self {
-        Error::Pockety(error.to_string())
+        Error::Pocket(error.to_string())
     }
 }
 
@@ -44,7 +46,13 @@ impl From<async_session::serde_json::Error> for Error {
 
 impl From<axum::Error> for Error {
     fn from(error: axum::Error) -> Self {
-        Error::Axum(error.to_string())
+        Error::Internal(error.to_string())
+    }
+}
+
+impl From<biscuit::errors::Error> for Error {
+    fn from(error: biscuit::errors::Error) -> Self {
+        Error::Internal(error.to_string())
     }
 }
 
@@ -53,9 +61,8 @@ impl IntoResponse for Error {
         tracing::error!("{self:#?}");
 
         let (status, error_message) = match self {
-            Error::Cookie(_) => (StatusCode::BAD_REQUEST, "Unauthorized"),
-            Error::Pockety(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Internal Server Error"),
-            Error::Axum(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Internal Server Error"),
+            Error::Cookie(_) | Error::BadRequest(_) => (StatusCode::BAD_REQUEST, "Unauthorized"),
+            _ => (StatusCode::INTERNAL_SERVER_ERROR, "Internal Server Error"),
         };
 
         let body = Json(json!({

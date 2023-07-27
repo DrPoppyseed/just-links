@@ -8,6 +8,7 @@ use axum::{
     RequestPartsExt,
     TypedHeader,
 };
+use biscuit::{jwk::JWK, Empty};
 use error::Error;
 use pockety::Pockety;
 use serde::{Deserialize, Serialize};
@@ -17,7 +18,7 @@ pub mod error;
 
 pub static COOKIE_NAME: &str = "ID";
 
-pub type ApiResult<R> = std::result::Result<TypedResponse<R>, Error>;
+pub type ApiResult<R> = Result<TypedResponse<R>, Error>;
 
 #[derive(Debug, Clone)]
 pub struct TypedResponse<B>
@@ -80,14 +81,27 @@ where
 }
 
 #[derive(Debug, Clone)]
+pub struct Config {
+    pub jws_signing_secret: String,
+    pub jwe_encryption_key: JWK<Empty>,
+}
+
+#[derive(Debug, Clone)]
 pub struct AppState {
     pub pockety: Pockety,
     pub store: MemoryStore,
+    pub config: Config,
 }
 
 impl FromRef<AppState> for Pockety {
     fn from_ref(state: &AppState) -> Self {
         state.pockety.clone()
+    }
+}
+
+impl FromRef<AppState> for Config {
+    fn from_ref(state: &AppState) -> Self {
+        state.config.clone()
     }
 }
 
@@ -101,6 +115,7 @@ impl FromRef<AppState> for MemoryStore {
 pub struct SessionData {
     request_token: Option<String>,
     access_token: Option<String>,
+    csrf_token: Option<String>,
     username: Option<String>,
 }
 

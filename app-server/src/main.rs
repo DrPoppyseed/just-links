@@ -1,7 +1,7 @@
 use std::{env, net::SocketAddr};
 
 use app_server::{
-    api::{get_access_token, get_articles, get_request_token, get_session_info, health_check},
+    api::{get_access_token, get_articles, get_request_token, health_check},
     AppState,
     Config,
 };
@@ -30,7 +30,7 @@ async fn main() {
 
     let jws_signing_secret = env::var("JWS_SIGNING_SECRET").expect("Missing JWS_SIGNING_SECRET");
     let jwe_encryption_key: JWK<Empty> = JWK::new_octet_key(
-        &env::var("JWE_ENCRYPTION_KEY")
+        env::var("JWE_ENCRYPTION_KEY")
             .expect("Missing JWE_ENCRYPTION_KEY")
             .as_bytes(),
         Default::default(),
@@ -71,7 +71,6 @@ async fn main() {
     let app = Router::new()
         .route("/health-check", get(health_check))
         .route("/articles", get(get_articles))
-        .route("/session-info", get(get_session_info))
         .route("/auth/authn", post(get_request_token))
         .route("/auth/authz", post(get_access_token))
         .layer(cors_layer)

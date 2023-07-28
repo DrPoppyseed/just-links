@@ -9,21 +9,14 @@ use axum::{
 pub enum Error {
     Cookie(String),
     Pocket(String),
-    Internal(String),
-    BadRequest(String),
+    Api(ApiError),
 }
 
-impl std::error::Error for Error {}
-
-impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Error::Cookie(message) => write!(f, "error: {message}"),
-            Error::Pocket(message) => write!(f, "error: {message}"),
-            Error::Internal(message) => write!(f, "error: {message}"),
-            Error::BadRequest(message) => write!(f, "error: {message}"),
-        }
-    }
+#[derive(Debug, Clone)]
+pub enum ApiError {
+    BadRequest(String),
+    InternalServerError(String),
+    Unauthorized(String),
 }
 
 impl From<pockety::Error> for Error {
@@ -46,13 +39,13 @@ impl From<async_session::serde_json::Error> for Error {
 
 impl From<axum::Error> for Error {
     fn from(error: axum::Error) -> Self {
-        Error::Internal(error.to_string())
+        Error::Api(ApiError::InternalServerError(error.to_string()))
     }
 }
 
 impl From<biscuit::errors::Error> for Error {
     fn from(error: biscuit::errors::Error) -> Self {
-        Error::Internal(error.to_string())
+        Error::Api(ApiError::InternalServerError(error.to_string()))
     }
 }
 
@@ -61,7 +54,10 @@ impl IntoResponse for Error {
         tracing::error!("{self:#?}");
 
         let (status, error_message) = match self {
-            Error::Cookie(_) | Error::BadRequest(_) => (StatusCode::BAD_REQUEST, "Unauthorized"),
+            Error::Cookie(_) | Error::Api(ApiError::BadRequest(_)) => {
+                (StatusCode::BAD_REQUEST, "Bad Request")
+            }
+            Error::Api(ApiError::Unauthorized(_)) => (StatusCode::UNAUTHORIZED, "Unauthorized"),
             _ => (StatusCode::INTERNAL_SERVER_ERROR, "Internal Server Error"),
         };
 

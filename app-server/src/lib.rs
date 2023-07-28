@@ -4,7 +4,7 @@ use api::OAuthStateParam;
 use async_session::{async_trait, MemoryStore, SessionStore};
 use axum::{
     extract::{rejection::TypedHeaderRejectionReason, FromRef, FromRequestParts},
-    headers::{self},
+    headers,
     http::{request::Parts, HeaderMap, StatusCode},
     response::{IntoResponse, Response},
     Json,

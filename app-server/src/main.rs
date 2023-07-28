@@ -1,7 +1,11 @@
 use std::{env, net::SocketAddr};
 
 use app_server::{
-    api::{get_access_token, get_articles, get_request_token, health_check, OAuthStateParam},
+    api::{
+        articles::get_articles,
+        auth::{get_access_token, get_request_token, OAuthStateParam},
+        health_check,
+    },
     AppState,
     Config,
 };

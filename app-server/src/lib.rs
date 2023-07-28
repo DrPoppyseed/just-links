@@ -1,3 +1,6 @@
+#![feature(result_option_inspect)]
+
+use api::OAuthStateParam;
 use async_session::{async_trait, MemoryStore, SessionStore};
 use axum::{
     extract::{rejection::TypedHeaderRejectionReason, FromRef, FromRequestParts},
@@ -8,7 +11,7 @@ use axum::{
     RequestPartsExt,
     TypedHeader,
 };
-use biscuit::{jwk::JWK, Empty};
+use biscuit::jwk::JWK;
 use error::Error;
 use pockety::Pockety;
 use serde::{Deserialize, Serialize};
@@ -83,7 +86,7 @@ where
 #[derive(Debug, Clone)]
 pub struct Config {
     pub jws_signing_secret: String,
-    pub jwe_encryption_key: JWK<Empty>,
+    pub jwe_encryption_key: JWK<OAuthStateParam>,
 }
 
 #[derive(Debug, Clone)]

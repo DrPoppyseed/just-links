@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use async_session::{
     chrono::{Duration, Utc},
     MemoryStore,
@@ -11,6 +9,7 @@ use axum::{
     http::{
         header::{LOCATION, SET_COOKIE},
         HeaderMap,
+        HeaderValue,
         StatusCode,
     },
     response::IntoResponse,
@@ -41,6 +40,7 @@ use pockety::{
 };
 use rand::{thread_rng, RngCore};
 use serde::{Deserialize, Serialize};
+use tracing::debug;
 
 use crate::{
     error::{self, ApiError, Error},
@@ -51,6 +51,8 @@ use crate::{
     TypedResponse,
 };
 
+const JUST_LINKS_ISSUER: &str = "https://just-links.dev";
+
 pub async fn health_check() -> impl IntoResponse {
     "Healthy!"
 }
@@ -58,11 +60,11 @@ pub async fn health_check() -> impl IntoResponse {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GetRequestTokenResponse {
-    request_token: String,
-    auth_uri: String,
+    pub request_token: String,
+    pub auth_uri: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct OAuthStateParam {
     pub request_token: String,
@@ -78,10 +80,17 @@ pub async fn get_request_token(
     State(pockety): State<Pockety>,
     State(config): State<Config>,
 ) -> ApiResult<()> {
+    const LOG_TAG: &str = "[get_request_token]";
+    debug!("{LOG_TAG} start!");
+
     // TODO: implement rate limiting
     // TODO: is there a way to check if a user is already authed?
     // TODO: use an actual cookie manager, since we're currently not signing or encrypting them
-    let PocketyGetRequestTokenResponse { code, .. } = pockety.get_request_token(None).await?;
+    let PocketyGetRequestTokenResponse { code, .. } = pockety
+        .get_request_token(None)
+        .inspect_ok(|r| debug!("{LOG_TAG} got request token from pocket: res: {r:?}"))
+        .inspect_err(|e| debug!("{LOG_TAG} failed to get request token from pocket. err: {e}"))
+        .await?;
 
     let mut csrf_token = [0u8; 32];
     thread_rng().fill_bytes(&mut csrf_token);
@@ -94,7 +103,7 @@ pub async fn get_request_token(
         ..Default::default()
     };
 
-    tracing::debug!("generated following session_data: {session_data:#?}");
+    debug!("{LOG_TAG} generated following session_data: {session_data:#?}");
 
     // session
     // TODO: abstract this probably, since we don't want to handle CRUD with session
@@ -102,6 +111,10 @@ pub async fn get_request_token(
     session.insert("session", &session_data)?;
     let session_cookie = store
         .store_session(session)
+        .inspect_ok(|r| {
+            debug!("{LOG_TAG} successfully stored session to store and generated cookie: {r:?}")
+        })
+        .inspect_err(|e| debug!("{LOG_TAG} failed to store session with error: {e:?}"))
         .await
         .ok()
         .flatten()
@@ -119,7 +132,7 @@ pub async fn get_request_token(
     // sign the token
     let claims = ClaimsSet::<OAuthStateParam> {
         registered: RegisteredClaims {
-            issuer: Some(FromStr::from_str("https://just-links.dev").unwrap()),
+            issuer: Some(JUST_LINKS_ISSUER.to_string()),
             not_before: Some(Utc::now().timestamp().into()),
             ..Default::default()
         },
@@ -134,9 +147,16 @@ pub async fn get_request_token(
         claims,
     );
 
-    let jws = jwt.into_encoded(&Secret::Bytes(config.jws_signing_secret.into()))?;
+    let jws = jwt
+        .into_encoded(&Secret::Bytes(config.jws_signing_secret.into()))
+        .inspect(|r| {
+            debug!("{LOG_TAG} created JWS: {r:?}");
+        })
+        .inspect_err(|e| {
+            debug!("{LOG_TAG} failed to encode JWS. error:{e}");
+        })?;
 
-    let mut nonce = [0u8; 12];
+    let mut nonce = [0u8; 96 / 8];
     thread_rng().fill_bytes(&mut nonce);
     let options = EncryptionOptions::AES_GCM {
         nonce: nonce.to_vec(),
@@ -155,39 +175,47 @@ pub async fn get_request_token(
     );
 
     // Encrypt
-    if let Ok(Compact::Encrypted(token)) = jwe.encrypt(&config.jwe_encryption_key, &options) {
-        let auth_uri = format!(
-            "{}?request_token={}&redirect_uri={}&state={}",
-            PocketyUrl::AUTHORIZE,
-            code,
-            pockety.redirect_url,
-            token.to_string()
-        );
+    match jwe.encrypt(&config.jwe_encryption_key, &options) {
+        Ok(Compact::Encrypted(token)) => {
+            debug!("{LOG_TAG} create encrypted token: {token:?}");
 
-        let mut headers = HeaderMap::new();
-        headers.insert(LOCATION, auth_uri.parse().unwrap());
+            let auth_uri: HeaderValue = format!(
+                "{}?request_token={}&redirect_uri={}&state={}",
+                PocketyUrl::AUTHORIZE,
+                code,
+                pockety.redirect_url,
+                token
+            )
+            .parse()
+            .map_err(|e| Error::Api(ApiError::InternalServerError(format!("Failed parse header value: {e}"))))?;
 
-        Ok(TypedResponse::new(None)
-            .headers(Some(headers))
-            .status_code(StatusCode::SEE_OTHER))
-    } else {
-        Err(Error::Api(ApiError::InternalServerError(
-            "Failed to encrypt token".to_string(),
-        )))
+            let mut headers = HeaderMap::new();
+            headers.insert(LOCATION, auth_uri);
+
+            Ok(TypedResponse::new(None)
+                .headers(Some(headers))
+                .status_code(StatusCode::SEE_OTHER))
+        }
+        Ok(Compact::Decrypted { header, payload }) => Err(Error::Api(ApiError::InternalServerError(format!(
+            "Failed to encrypt token. Got decrypted token instead with header: {header:?} and payload: {payload:?}"
+        )))),
+        Err(err) => Err(Error::Api(ApiError::InternalServerError(format!(
+            "Failed to encrypt token. err: {err:?}"
+        )))),
     }
 }
 
 #[derive(Deserialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct GetAccessTokenRequest {
-    state: Option<String>,
+    pub state: Option<String>,
 }
 
 #[derive(Serialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct GetAccessTokenResponse {
-    username: String,
-    state: Option<String>,
+    pub username: String,
+    pub state: Option<String>,
 }
 
 #[axum::debug_handler(state = AppState)]
@@ -239,6 +267,7 @@ pub async fn get_access_token(
     let mut session = store
         .clone()
         .load_session(session_cookie.clone())
+        .inspect_err(|e| debug!("failed to store session with error: {e:?}"))
         .await
         .ok()
         .flatten()
@@ -255,6 +284,7 @@ pub async fn get_access_token(
             )))?;
 
     // compare csrf_token in request with csrf_token in session
+    // TODO: probably use matches!
     if csrf_token
         != session_data
             .csrf_token

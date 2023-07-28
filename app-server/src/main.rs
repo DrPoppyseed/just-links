@@ -1,7 +1,7 @@
 use std::{env, net::SocketAddr};
 
 use app_server::{
-    api::{get_access_token, get_articles, get_request_token, health_check},
+    api::{get_access_token, get_articles, get_request_token, health_check, OAuthStateParam},
     AppState,
     Config,
 };
@@ -12,7 +12,7 @@ use axum::{
     Router,
     Server,
 };
-use biscuit::{jwk::JWK, Empty};
+use biscuit::jwk::JWK;
 use dotenvy::dotenv;
 use pockety::Pockety;
 use tower_http::{cors::CorsLayer, trace};
@@ -29,7 +29,7 @@ async fn main() {
         .init();
 
     let jws_signing_secret = env::var("JWS_SIGNING_SECRET").expect("Missing JWS_SIGNING_SECRET");
-    let jwe_encryption_key: JWK<Empty> = JWK::new_octet_key(
+    let jwe_encryption_key: JWK<OAuthStateParam> = JWK::new_octet_key(
         env::var("JWE_ENCRYPTION_KEY")
             .expect("Missing JWE_ENCRYPTION_KEY")
             .as_bytes(),

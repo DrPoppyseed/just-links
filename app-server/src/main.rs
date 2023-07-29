@@ -3,9 +3,10 @@ use std::{env, net::SocketAddr};
 use app_server::{
     api::{
         articles::get_articles,
-        auth::{get_access_token, get_request_token, OAuthStateParam},
+        auth::{get_access_token, get_request_token},
         health_check,
     },
+    oauth::OAuthState,
     AppState,
     Config,
 };
@@ -33,7 +34,7 @@ async fn main() {
         .init();
 
     let jws_signing_secret = env::var("JWS_SIGNING_SECRET").expect("Missing JWS_SIGNING_SECRET");
-    let jwe_encryption_key: JWK<OAuthStateParam> = JWK::new_octet_key(
+    let jwe_encryption_key: JWK<OAuthState> = JWK::new_octet_key(
         env::var("JWE_ENCRYPTION_KEY")
             .expect("Missing JWE_ENCRYPTION_KEY")
             .as_bytes(),

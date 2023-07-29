@@ -1,6 +1,5 @@
 #![feature(result_option_inspect)]
 
-use api::auth::OAuthStateParam;
 use async_session::MemoryStore;
 use axum::{
     extract::FromRef,
@@ -10,6 +9,7 @@ use axum::{
 };
 use biscuit::jwk::JWK;
 use error::Error;
+use oauth::OAuthState;
 use pockety::Pockety;
 use serde::Serialize;
 
@@ -85,7 +85,7 @@ where
 #[derive(Debug, Clone)]
 pub struct Config {
     pub jws_signing_secret: String,
-    pub jwe_encryption_key: JWK<OAuthStateParam>,
+    pub jwe_encryption_key: JWK<OAuthState>,
 }
 
 #[derive(Debug, Clone)]

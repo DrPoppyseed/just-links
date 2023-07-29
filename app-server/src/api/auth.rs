@@ -1,4 +1,4 @@
-use async_session::{chrono::Utc, MemoryStore, Session, SessionStore};
+use async_session::{chrono::Utc, serde_json, MemoryStore, Session, SessionStore};
 use axum::{
     extract::State,
     http::{
@@ -37,6 +37,7 @@ use tracing::debug;
 
 use crate::{
     error::{ApiError, Error},
+    oauth::{generate_csrf_token, OAuthState},
     session::SessionData,
     ApiResult,
     AppState,
@@ -51,17 +52,6 @@ const JUST_LINKS_ISSUER: &str = "https://just-links.dev";
 pub struct GetRequestTokenResponse {
     pub request_token: String,
     pub auth_uri: String,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, Default)]
-#[serde(rename_all = "camelCase")]
-pub struct OAuthStateParam {
-    pub request_token: String,
-    // TODO: use session_id instead of session cookie.
-    // we're only using the cookie here because async_session only allows access
-    // SessionStore using a cookie.
-    pub session_cookie: String,
-    pub csrf_token: String,
 }
 
 pub async fn get_request_token(
@@ -81,10 +71,7 @@ pub async fn get_request_token(
         .inspect_err(|e| debug!("{LOG_TAG} failed to get request token from pocket. err: {e}"))
         .await?;
 
-    let mut csrf_token = [0u8; 32];
-    thread_rng().fill_bytes(&mut csrf_token);
-    let csrf_token: String = csrf_token.iter().map(|t| t.to_string()).collect();
-
+    let csrf_token = generate_csrf_token();
     let mut session: Session = Session::new();
     let session_data = SessionData {
         request_token: Some(code.clone()),
@@ -112,14 +99,10 @@ pub async fn get_request_token(
         )))?;
 
     // state
-    let state = OAuthStateParam {
-        request_token: code.clone(),
-        session_cookie,
-        csrf_token,
-    };
+    let state = OAuthState::new(code.clone(), session_cookie, csrf_token);
 
     // sign the token
-    let claims = ClaimsSet::<OAuthStateParam> {
+    let claims = ClaimsSet::<OAuthState> {
         registered: RegisteredClaims {
             issuer: Some(JUST_LINKS_ISSUER.to_string()),
             not_before: Some(Utc::now().timestamp().into()),
@@ -163,7 +146,7 @@ pub async fn get_request_token(
 
     // Encrypt
     match jwe.encrypt(&config.jwe_encryption_key, &options) {
-        Ok(Compact::Encrypted(token)) => {
+        Ok(token) => {
             debug!("{LOG_TAG} create encrypted token: {token:?}");
 
             let auth_uri: HeaderValue = format!(
@@ -171,10 +154,14 @@ pub async fn get_request_token(
                 PocketyUrl::AUTHORIZE,
                 code,
                 pockety.redirect_url,
-                token
+                format!("{token:?}") // TODO: this won't work
             )
             .parse()
-            .map_err(|e| Error::Api(ApiError::InternalServerError(format!("Failed parse header value: {e}"))))?;
+            .map_err(|e| {
+                Error::Api(ApiError::InternalServerError(format!(
+                    "Failed parse header value: {e}"
+                )))
+            })?;
 
             let mut headers = HeaderMap::new();
             headers.insert(LOCATION, auth_uri);
@@ -183,9 +170,6 @@ pub async fn get_request_token(
                 .headers(Some(headers))
                 .status_code(StatusCode::SEE_OTHER))
         }
-        Ok(Compact::Decrypted { header, payload }) => Err(Error::Api(ApiError::InternalServerError(format!(
-            "Failed to encrypt token. Got decrypted token instead with header: {header:?} and payload: {payload:?}"
-        )))),
         Err(err) => Err(Error::Api(ApiError::InternalServerError(format!(
             "Failed to encrypt token. err: {err:?}"
         )))),
@@ -213,7 +197,7 @@ pub async fn get_access_token(
     body: Json<GetAccessTokenRequest>,
 ) -> ApiResult<GetAccessTokenResponse> {
     let state = if let Some(token) = body.state.clone() {
-        let token: JWE<OAuthStateParam, Empty, Empty> = JWE::new_encrypted(&token);
+        let token: JWE<OAuthState, Empty, Empty> = JWE::new_encrypted(&token);
 
         match token
             .into_decrypted(
@@ -239,7 +223,7 @@ pub async fn get_access_token(
         )))?;
     };
 
-    let OAuthStateParam {
+    let OAuthState {
         request_token,
         session_cookie,
         csrf_token,

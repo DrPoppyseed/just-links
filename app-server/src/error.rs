@@ -9,6 +9,7 @@ use axum::{
 pub enum Error {
     Cookie(String),
     Pocket(String),
+    Jwt(String),
     Api(ApiError),
 }
 

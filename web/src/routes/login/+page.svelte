@@ -9,9 +9,20 @@
   onMount(async () => {
     loading = true;
 
+    const urlParams = new URLSearchParams(window.location.search);
+    const stateParam = urlParams.get("state");
+
     const res = await axios.post<{
       username: Option<string>;
-    }>("http://localhost:8080/auth/authz");
+    }>(
+      "http://localhost:8080/auth/authz",
+      {
+        state: stateParam || null,
+      },
+      {
+        withCredentials: true,
+      }
+    );
 
     loading = false;
     if (res.status === 200 && res.data.username) {

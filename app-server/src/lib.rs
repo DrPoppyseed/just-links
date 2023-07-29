@@ -7,7 +7,7 @@ use axum::{
     response::{IntoResponse, Response},
     Json,
 };
-use biscuit::jwk::JWK;
+use biscuit::{jwk::JWK, jws::Secret};
 use error::Error;
 use oauth::OAuthState;
 use pockety::Pockety;
@@ -82,13 +82,13 @@ where
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Config {
-    pub jws_signing_secret: String,
+    pub jws_signing_secret: Secret,
     pub jwe_encryption_key: JWK<OAuthState>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct AppState {
     pub pockety: Pockety,
     pub store: MemoryStore,

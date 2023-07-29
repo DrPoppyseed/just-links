@@ -1,4 +1,4 @@
-use async_session::{chrono::Utc, serde_json, MemoryStore, Session, SessionStore};
+use async_session::{MemoryStore, Session, SessionStore};
 use axum::{
     extract::State,
     http::{
@@ -9,21 +9,7 @@ use axum::{
     },
     Json,
 };
-use biscuit::{
-    jwa::{
-        ContentEncryptionAlgorithm,
-        EncryptionOptions,
-        KeyManagementAlgorithm,
-        SignatureAlgorithm,
-    },
-    jwe::{self, Compact},
-    jws::{self, Secret},
-    ClaimsSet,
-    Empty,
-    RegisteredClaims,
-    JWE,
-    JWT,
-};
+use axum_extra::extract::cookie::{Cookie, Expiration};
 use futures::TryFutureExt;
 use pockety::{
     GetAccessTokenResponse as PocketyGetAccessTokenResponse,
@@ -31,8 +17,8 @@ use pockety::{
     Pockety,
     PocketyUrl,
 };
-use rand::{thread_rng, RngCore};
 use serde::{Deserialize, Serialize};
+use time::{Duration, OffsetDateTime};
 use tracing::debug;
 
 use crate::{
@@ -43,9 +29,8 @@ use crate::{
     AppState,
     Config,
     TypedResponse,
+    COOKIE_NAME,
 };
-
-const JUST_LINKS_ISSUER: &str = "https://just-links.dev";
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -79,7 +64,7 @@ pub async fn get_request_token(
         ..Default::default()
     };
 
-    debug!("{LOG_TAG} generated following session_data: {session_data:#?}");
+    debug!("{LOG_TAG} generated following session_data: {session_data:?}");
 
     // session
     // TODO: abstract this probably, since we don't want to handle CRUD with session
@@ -99,81 +84,29 @@ pub async fn get_request_token(
         )))?;
 
     // state
-    let state = OAuthState::new(code.clone(), session_cookie, csrf_token);
+    let token = OAuthState::new(code.clone(), session_cookie, csrf_token)
+        .into_token(config.jws_signing_secret, config.jwe_encryption_key)?;
 
-    // sign the token
-    let claims = ClaimsSet::<OAuthState> {
-        registered: RegisteredClaims {
-            issuer: Some(JUST_LINKS_ISSUER.to_string()),
-            not_before: Some(Utc::now().timestamp().into()),
-            ..Default::default()
-        },
-        private: state,
-    };
+    debug!("{LOG_TAG} create encrypted token: {token:?}");
 
-    let jwt = JWT::new_decoded(
-        From::from(jws::RegisteredHeader {
-            algorithm: SignatureAlgorithm::HS256,
-            ..Default::default()
-        }),
-        claims,
-    );
+    let auth_uri: HeaderValue = format!(
+        "{}?request_token={code}&redirect_uri={}%3Fstate={token}&state={token}",
+        PocketyUrl::AUTHORIZE,
+        pockety.redirect_url,
+    )
+    .parse()
+    .map_err(|e| {
+        Error::Api(ApiError::InternalServerError(format!(
+            "Failed parse header value: {e}"
+        )))
+    })?;
 
-    let jws = jwt
-        .into_encoded(&Secret::Bytes(config.jws_signing_secret.into()))
-        .inspect(|r| {
-            debug!("{LOG_TAG} created JWS: {r:?}");
-        })
-        .inspect_err(|e| {
-            debug!("{LOG_TAG} failed to encode JWS. error:{e}");
-        })?;
+    let mut headers = HeaderMap::new();
+    headers.insert(LOCATION, auth_uri);
 
-    let mut nonce = [0u8; 96 / 8];
-    thread_rng().fill_bytes(&mut nonce);
-    let options = EncryptionOptions::AES_GCM {
-        nonce: nonce.to_vec(),
-    };
-
-    // Construct the JWE
-    let jwe = JWE::new_decrypted(
-        From::from(jwe::RegisteredHeader {
-            cek_algorithm: KeyManagementAlgorithm::A256GCMKW,
-            enc_algorithm: ContentEncryptionAlgorithm::A256GCM,
-            ..Default::default()
-        }),
-        jws,
-    );
-
-    // Encrypt
-    match jwe.encrypt(&config.jwe_encryption_key, &options) {
-        Ok(token) => {
-            debug!("{LOG_TAG} create encrypted token: {token:?}");
-
-            let auth_uri: HeaderValue = format!(
-                "{}?request_token={}&redirect_uri={}&state={}",
-                PocketyUrl::AUTHORIZE,
-                code,
-                pockety.redirect_url,
-                format!("{token:?}") // TODO: this won't work
-            )
-            .parse()
-            .map_err(|e| {
-                Error::Api(ApiError::InternalServerError(format!(
-                    "Failed parse header value: {e}"
-                )))
-            })?;
-
-            let mut headers = HeaderMap::new();
-            headers.insert(LOCATION, auth_uri);
-
-            Ok(TypedResponse::new(None)
-                .headers(Some(headers))
-                .status_code(StatusCode::SEE_OTHER))
-        }
-        Err(err) => Err(Error::Api(ApiError::InternalServerError(format!(
-            "Failed to encrypt token. err: {err:?}"
-        )))),
-    }
+    Ok(TypedResponse::new(None)
+        .headers(Some(headers))
+        .status_code(StatusCode::SEE_OTHER))
 }
 
 #[derive(Deserialize, Clone, Debug)]
@@ -196,42 +129,29 @@ pub async fn get_access_token(
     State(config): State<Config>,
     body: Json<GetAccessTokenRequest>,
 ) -> ApiResult<GetAccessTokenResponse> {
-    let state = if let Some(token) = body.state.clone() {
-        let token: JWE<OAuthState, Empty, Empty> = JWE::new_encrypted(&token);
+    const LOG_TAG: &str = "[get_access_token]";
 
-        match token
-            .into_decrypted(
-                &config.jwe_encryption_key,
-                KeyManagementAlgorithm::A256GCMKW,
-                ContentEncryptionAlgorithm::A256GCM,
-            )
-            .and_then(|d| d.payload().cloned())?
-        {
-            jws::Compact::Decoded { payload, .. } => {
-                println!("payload: {payload:#?}");
-                payload
-            }
-            jws::Compact::Encoded(_) => {
-                return Err(Error::Api(ApiError::InternalServerError(
-                    "Failed to decrypt token".to_string(),
-                )))?;
-            }
-        }
-    } else {
-        return Err(Error::Api(ApiError::BadRequest(
-            "Missing state param".to_string(),
-        )))?;
-    };
+    debug!("{LOG_TAG} start! received request body: {body:?}");
 
     let OAuthState {
         request_token,
         session_cookie,
         csrf_token,
-    } = state.private.clone();
+    } = body
+        .state
+        .clone()
+        .ok_or(Error::Api(ApiError::BadRequest(
+            "Missing state param".to_string(),
+        )))
+        .and_then(|token| {
+            OAuthState::from_token(token, config.jws_signing_secret, config.jwe_encryption_key)
+        })?;
 
     // TODO: Should I fill `state` in?
     let res: PocketyGetAccessTokenResponse = pockety
         .get_access_token(request_token.clone(), None)
+        .inspect_ok(|r| debug!("{LOG_TAG} successfully acquired access_token from pocket: {r:?}"))
+        .inspect_err(|e| debug!("{LOG_TAG} failed to get access_token from pocket: {e:?}"))
         .map_err(Error::from)
         .await?;
 
@@ -269,12 +189,24 @@ pub async fn get_access_token(
         )));
     }
 
+    // update session
     session_data.access_token = Some(res.access_token.clone());
     session.insert("session", &session_data)?;
 
-    // update session
     let mut headers = HeaderMap::new();
-    headers.insert(SET_COOKIE, session_cookie.parse().unwrap());
+    headers.insert(
+        SET_COOKIE,
+        Cookie::build(COOKIE_NAME, session_cookie)
+            .http_only(true)
+            .expires(Expiration::from(
+                OffsetDateTime::now_utc() + Duration::minutes(60),
+            ))
+            .path("/")
+            .finish()
+            .to_string()
+            .parse()
+            .unwrap(),
+    );
 
     Ok(TypedResponse::new(Some(GetAccessTokenResponse {
         username: res.username.clone(),

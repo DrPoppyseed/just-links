@@ -15,7 +15,8 @@
       loading = true;
 
       const getArticlesRes = await axios.get<{ articles: Articles }>(
-        "http://localhost:8080/articles"
+        "http://localhost:8080/articles",
+        { withCredentials: true }
       );
 
       console.log({ getArticlesRes });

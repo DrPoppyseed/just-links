@@ -33,7 +33,12 @@ async fn main() {
         .compact()
         .init();
 
-    let jws_signing_secret = env::var("JWS_SIGNING_SECRET").expect("Missing JWS_SIGNING_SECRET");
+    let jws_signing_secret = biscuit::jws::Secret::Bytes(
+        env::var("JWS_SIGNING_SECRET")
+            .expect("Missing JWS_SIGNING_SECRET")
+            .as_bytes()
+            .to_vec(),
+    );
     let jwe_encryption_key: JWK<OAuthState> = JWK::new_octet_key(
         env::var("JWE_ENCRYPTION_KEY")
             .expect("Missing JWE_ENCRYPTION_KEY")
@@ -57,6 +62,8 @@ async fn main() {
         .allow_headers([
             "Content-Type".parse().unwrap(),
             "Authorization".parse().unwrap(),
+            "Accept".parse().unwrap(),
+            "Origin".parse().unwrap(),
         ])
         .allow_methods([Method::GET, Method::POST])
         .allow_credentials(true);

@@ -46,10 +46,26 @@ impl OAuthState {
             csrf_token,
         }
     }
+
+    pub fn into_token(
+        self,
+        jws_secret: impl Into<Secret>,
+        jwe_key: impl Into<JWK<Self>>,
+    ) -> Result<String, Error> {
+        Jwt::jws_encode(self, jws_secret).and_then(|signed| Jwt::jwe_encrypt(signed, jwe_key))
+    }
+
+    pub fn from_token(
+        token: String,
+        jws_secret: impl Into<Secret>,
+        jwe_key: impl Into<JWK<Self>>,
+    ) -> Result<Self, Error> {
+        Jwt::jwe_decrypt(&token, jwe_key, jws_secret)
+    }
 }
 
 pub fn generate_csrf_token() -> String {
-    let mut bytes = [0u8; 32];
+    let mut bytes = [0u8; 256 / 8];
     thread_rng().fill_bytes(&mut bytes);
     base64::encode_config(bytes, base64::URL_SAFE_NO_PAD)
 }

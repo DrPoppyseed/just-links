@@ -72,7 +72,8 @@ async fn main() {
     let pocket_redirect_uri = env::var("POCKET_REDIRECT_URI").expect("Missing POCKET_REDIRECT_URI");
     tracing::debug!("Initializing Pockety instance with consumer_key: {pocket_consumer_key} and redirect_uri: {pocket_redirect_uri}.");
 
-    let pockety = Pockety::new(pocket_consumer_key, &pocket_redirect_uri);
+    let pockety = Pockety::new(pocket_consumer_key, pocket_redirect_uri.as_str())
+        .expect("Failed to initialize Pockety instance.");
 
     let app_state = AppState {
         pockety,

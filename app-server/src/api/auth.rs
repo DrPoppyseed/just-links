@@ -15,7 +15,6 @@ use pockety::{
     GetAccessTokenResponse as PocketyGetAccessTokenResponse,
     GetRequestTokenResponse as PocketyGetRequestTokenResponse,
     Pockety,
-    PocketyUrl,
 };
 use serde::{Deserialize, Serialize};
 use time::{Duration, OffsetDateTime};
@@ -91,7 +90,7 @@ pub async fn get_request_token(
 
     let auth_uri: HeaderValue = format!(
         "{}?request_token={code}&redirect_uri={}%3Fstate={token}&state={token}",
-        PocketyUrl::AUTHORIZE,
+        Pockety::AUTHORIZE_URL,
         pockety.redirect_url,
     )
     .parse()

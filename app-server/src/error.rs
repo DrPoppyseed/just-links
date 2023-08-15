@@ -1,9 +1,9 @@
-use async_session::serde_json::json;
 use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
     Json,
 };
+use serde_json::json;
 
 #[derive(Debug, Clone)]
 pub enum Error {
@@ -27,14 +27,8 @@ impl From<pockety::Error> for Error {
     }
 }
 
-impl From<async_session::Error> for Error {
-    fn from(error: async_session::Error) -> Self {
-        Error::Cookie(error.to_string())
-    }
-}
-
-impl From<async_session::serde_json::Error> for Error {
-    fn from(error: async_session::serde_json::Error) -> Self {
+impl From<serde_json::Error> for Error {
+    fn from(error: serde_json::Error) -> Self {
         Error::Cookie(error.to_string())
     }
 }

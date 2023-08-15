@@ -192,7 +192,7 @@ pub async fn get_access_token(
 
     // TODO: create new session with new crsf token, and destroy previous session
 
-    let _destroy = con
+    con
         .del(hashed_session_id.clone())
         .map_err(|e| {
             // TODO: consider whether failing to destroy an old session should fail the entire
@@ -209,7 +209,7 @@ pub async fn get_access_token(
     };
 
     let stringified_session_data = serde_json::to_string(&session_data)?;
-    let _set = con
+    con
         .set(hashed_session_id.0.clone(), stringified_session_data)
         .map_err(|e| {
             error!(

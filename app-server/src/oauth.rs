@@ -1,6 +1,10 @@
 use std::fmt;
 
-use async_session::base64;
+use base64::{
+    alphabet,
+    engine::{general_purpose, GeneralPurpose},
+    Engine,
+};
 use biscuit::{
     jwa::{
         ContentEncryptionAlgorithm,
@@ -24,6 +28,9 @@ use serde::{Deserialize, Serialize};
 use crate::error::Error;
 
 const JUST_LINKS_ISSUER: &str = "https://just-links.dev";
+
+const URL_SAFE_ENGINE: GeneralPurpose =
+    GeneralPurpose::new(&alphabet::URL_SAFE, general_purpose::NO_PAD);
 
 pub struct JwsEncoded<T>(pub jws::Compact<ClaimsSet<T>, Empty>);
 
@@ -64,7 +71,8 @@ impl OAuthState {
 pub fn generate_csrf_token() -> String {
     let mut bytes = [0u8; 256 / 8];
     thread_rng().fill_bytes(&mut bytes);
-    base64::encode_config(bytes, base64::URL_SAFE_NO_PAD)
+
+    URL_SAFE_ENGINE.encode(bytes)
 }
 
 pub struct Jwt;

@@ -1,12 +1,15 @@
 #![feature(result_option_inspect)]
 
-use async_session::MemoryStore;
+use std::sync::Arc;
+
 use axum::{
     extract::FromRef,
     http::{HeaderMap, StatusCode},
     response::{IntoResponse, Response},
     Json,
 };
+use bb8::Pool;
+use bb8_redis::RedisConnectionManager;
 use biscuit::{jwk::JWK, jws::Secret};
 use error::Error;
 use oauth::OAuthState;
@@ -91,7 +94,7 @@ pub struct Config {
 #[derive(Clone)]
 pub struct AppState {
     pub pockety: Pockety,
-    pub store: MemoryStore,
+    pub session_store: Arc<Pool<RedisConnectionManager>>,
     pub config: Config,
 }
 
@@ -107,8 +110,8 @@ impl FromRef<AppState> for Config {
     }
 }
 
-impl FromRef<AppState> for MemoryStore {
+impl FromRef<AppState> for Arc<Pool<RedisConnectionManager>> {
     fn from_ref(state: &AppState) -> Self {
-        state.store.clone()
+        state.session_store.clone()
     }
 }

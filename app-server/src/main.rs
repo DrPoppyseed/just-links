@@ -1,4 +1,4 @@
-use std::{env, net::SocketAddr};
+use std::{env, net::SocketAddr, sync::Arc};
 
 use app_server::{
     api::{
@@ -10,14 +10,15 @@ use app_server::{
     AppState,
     Config,
 };
-use async_session::MemoryStore;
 use axum::{
     http::Method,
     routing::{get, post},
     Router,
     Server,
 };
-use biscuit::jwk::JWK;
+use bb8::Pool;
+use bb8_redis::RedisConnectionManager;
+use biscuit::{jwk::JWK, jws::Secret};
 use dotenvy::dotenv;
 use pockety::Pockety;
 use tower_http::{cors::CorsLayer, trace};
@@ -33,7 +34,7 @@ async fn main() {
         .compact()
         .init();
 
-    let jws_signing_secret = biscuit::jws::Secret::Bytes(
+    let jws_signing_secret = Secret::Bytes(
         env::var("JWS_SIGNING_SECRET")
             .expect("Missing JWS_SIGNING_SECRET")
             .as_bytes()
@@ -46,12 +47,19 @@ async fn main() {
         Default::default(),
     );
 
+    let redis_url: String = env::var("REDIS_URL").expect("Missing REDIS_URL");
+
     let config = Config {
         jws_signing_secret,
         jwe_encryption_key,
     };
 
-    let store = MemoryStore::new();
+    let manager =
+        RedisConnectionManager::new(redis_url).expect("Failed to build redis connection manager");
+    let pool = Pool::builder()
+        .build(manager)
+        .await
+        .expect("Failed to build redis pool");
 
     let cors_layer = CorsLayer::new()
         .allow_origin([
@@ -77,7 +85,7 @@ async fn main() {
 
     let app_state = AppState {
         pockety,
-        store,
+        session_store: Arc::new(pool),
         config,
     };
 

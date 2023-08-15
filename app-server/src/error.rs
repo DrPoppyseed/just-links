@@ -8,6 +8,7 @@ use axum::{
 #[derive(Debug, Clone)]
 pub enum Error {
     Cookie(String),
+    Session(String),
     Pocket(String),
     Jwt(String),
     Api(ApiError),

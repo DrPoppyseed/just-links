@@ -1,4 +1,5 @@
-use async_session::{MemoryStore, Session, SessionStore};
+use std::sync::Arc;
+
 use axum::{
     extract::State,
     http::{
@@ -10,20 +11,23 @@ use axum::{
     Json,
 };
 use axum_extra::extract::cookie::{Cookie, Expiration};
+use bb8::Pool;
+use bb8_redis::RedisConnectionManager;
 use futures::TryFutureExt;
 use pockety::{
     GetAccessTokenResponse as PocketyGetAccessTokenResponse,
     GetRequestTokenResponse as PocketyGetRequestTokenResponse,
     Pockety,
 };
+use redis::AsyncCommands;
 use serde::{Deserialize, Serialize};
 use time::{Duration, OffsetDateTime};
-use tracing::debug;
+use tracing::{debug, error};
 
 use crate::{
     error::{ApiError, Error},
     oauth::{generate_csrf_token, OAuthState},
-    session::SessionData,
+    session::{generate_session_id, hash, AuthzedSessionData, RequestTokenSessionData},
     ApiResult,
     AppState,
     Config,
@@ -39,9 +43,9 @@ pub struct GetRequestTokenResponse {
 }
 
 pub async fn get_request_token(
-    State(store): State<MemoryStore>,
     State(pockety): State<Pockety>,
     State(config): State<Config>,
+    State(session_store): State<Arc<Pool<RedisConnectionManager>>>,
 ) -> ApiResult<()> {
     const LOG_TAG: &str = "[get_request_token]";
     debug!("{LOG_TAG} start!");
@@ -56,34 +60,33 @@ pub async fn get_request_token(
         .await?;
 
     let csrf_token = generate_csrf_token();
-    let mut session: Session = Session::new();
-    let session_data = SessionData {
-        request_token: Some(code.clone()),
-        csrf_token: Some(csrf_token.clone()),
-        ..Default::default()
+
+    let session_data = RequestTokenSessionData {
+        request_token: code.clone(),
+        csrf_token: csrf_token.clone(),
     };
+    let (session_id, hashed_session_id) = generate_session_id()?;
+
+    let mut con = session_store
+        .get_owned()
+        .map_err(|e| {
+            error!("{LOG_TAG} Failed to established redis connection from pool. Error: {e:?}");
+            Error::Session("Connection error".to_string())
+        })
+        .await?;
+
+    let stringified_session_data = serde_json::to_string(&session_data)?;
+    con.set(hashed_session_id.0, stringified_session_data)
+        .map_err(|e| {
+            error!("{LOG_TAG} Failed to store session. Error: {e:?}");
+            Error::Session("Failed to store session".to_string())
+        })
+        .await?;
 
     debug!("{LOG_TAG} generated following session_data: {session_data:?}");
 
-    // session
-    // TODO: abstract this probably, since we don't want to handle CRUD with session
-    // through raw string keys every time right?
-    session.insert("session", &session_data)?;
-    let session_cookie = store
-        .store_session(session)
-        .inspect_ok(|r| {
-            debug!("{LOG_TAG} successfully stored session to store and generated cookie: {r:?}")
-        })
-        .inspect_err(|e| debug!("{LOG_TAG} failed to store session with error: {e:?}"))
-        .await
-        .ok()
-        .flatten()
-        .ok_or(Error::Api(ApiError::InternalServerError(
-            "Failed to store session".to_string(),
-        )))?;
-
     // state
-    let token = OAuthState::new(code.clone(), session_cookie, csrf_token)
+    let token = OAuthState::new(code.clone(), session_id.0, csrf_token)
         .into_token(config.jws_signing_secret, config.jwe_encryption_key)?;
 
     debug!("{LOG_TAG} create encrypted token: {token:?}");
@@ -124,8 +127,8 @@ pub struct GetAccessTokenResponse {
 #[axum::debug_handler(state = AppState)]
 pub async fn get_access_token(
     State(pockety): State<Pockety>,
-    State(store): State<MemoryStore>,
     State(config): State<Config>,
+    State(session_store): State<Arc<Pool<RedisConnectionManager>>>,
     body: Json<GetAccessTokenRequest>,
 ) -> ApiResult<GetAccessTokenResponse> {
     const LOG_TAG: &str = "[get_access_token]";
@@ -134,7 +137,7 @@ pub async fn get_access_token(
 
     let OAuthState {
         request_token,
-        session_cookie,
+        session_id,
         csrf_token,
     } = body
         .state
@@ -146,6 +149,39 @@ pub async fn get_access_token(
             OAuthState::from_token(token, config.jws_signing_secret, config.jwe_encryption_key)
         })?;
 
+    // Make sure the session is valid before requesting the access token from pocket.com
+    let mut con = session_store
+        .get_owned()
+        .map_err(|e| {
+            error!("{LOG_TAG} Failed to established redis connection from pool. Error: {e:?}");
+            Error::Session("Connection error".to_string())
+        })
+        .await?;
+
+    let hashed_session_id = hash(&session_id)?;
+    let hashed_session_id = hashed_session_id.as_str();
+    let session_data = con
+        .get(hashed_session_id.clone())
+        .map_err(|e| {
+            error!("{LOG_TAG} failed to retrieve session: {hashed_session_id} with error: {e:?}");
+            Error::Session("Failed to get session.".to_string())
+        })
+        .and_then(|session_data: String| async move {
+            serde_json::from_str::<RequestTokenSessionData>(&session_data).map_err(|e| {
+                error!("{LOG_TAG} failed to deserialize session: {hashed_session_id} with error: {e:?}");
+                Error::Session("Failed to deserialize session.".to_string())
+            })
+        })
+        .await?;
+
+    // compare csrf_token in request with csrf_token in session
+    // TODO: probably use matches!
+    if csrf_token != session_data.csrf_token.clone() {
+        return Err(Error::Api(ApiError::Unauthorized(
+            "CSRF token doesn't match".to_string(),
+        )));
+    }
+
     // TODO: Should I fill `state` in?
     let res: PocketyGetAccessTokenResponse = pockety
         .get_access_token(request_token.clone(), None)
@@ -154,48 +190,40 @@ pub async fn get_access_token(
         .map_err(Error::from)
         .await?;
 
-    let mut session = store
-        .clone()
-        .load_session(session_cookie.clone())
-        .inspect_err(|e| debug!("failed to store session with error: {e:?}"))
-        .await
-        .ok()
-        .flatten()
-        .ok_or(Error::Api(ApiError::InternalServerError(
-            "Couldn't find the session".to_string(),
-        )))?;
+    // TODO: create new session with new crsf token, and destroy previous session
 
-    // retrieve session by cookie value
-    let mut session_data: SessionData =
-        session
-            .get("session")
-            .ok_or(Error::Api(ApiError::InternalServerError(
-                "Empty session".to_string(),
-            )))?;
+    let _destroy = con
+        .del(hashed_session_id.clone())
+        .map_err(|e| {
+            // TODO: consider whether failing to destroy an old session should fail the entire
+            // request
+            error!("{LOG_TAG} failed to destroy session: {hashed_session_id} with error: {e:?}");
+            Error::Session("Failed to destroy session.".to_string())
+        })
+        .await?;
 
-    // compare csrf_token in request with csrf_token in session
-    // TODO: probably use matches!
-    if csrf_token
-        != session_data
-            .csrf_token
-            .clone()
-            .ok_or(Error::Api(ApiError::InternalServerError(
-                "CSRF token missing in session".to_string(),
-            )))?
-    {
-        return Err(Error::Api(ApiError::Unauthorized(
-            "CSRF token doesn't match".to_string(),
-        )));
-    }
+    let (session_id, hashed_session_id) = generate_session_id()?;
+    let session_data = AuthzedSessionData {
+        access_token: res.access_token.clone(),
+        username: Some(res.username.clone()),
+    };
 
-    // update session
-    session_data.access_token = Some(res.access_token.clone());
-    session.insert("session", &session_data)?;
+    let stringified_session_data = serde_json::to_string(&session_data)?;
+    let _set = con
+        .set(hashed_session_id.0.clone(), stringified_session_data)
+        .map_err(|e| {
+            error!(
+                "{LOG_TAG} failed to set new session: {} with error: {e:?}",
+                hashed_session_id.0
+            );
+            Error::Session("Failed to set new session.".to_string())
+        })
+        .await?;
 
     let mut headers = HeaderMap::new();
     headers.insert(
         SET_COOKIE,
-        Cookie::build(COOKIE_NAME, session_cookie)
+        Cookie::build(COOKIE_NAME, session_id.0)
             .http_only(true)
             .expires(Expiration::from(
                 OffsetDateTime::now_utc() + Duration::minutes(60),

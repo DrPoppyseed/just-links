@@ -31,18 +31,15 @@ pub struct JwsEncoded<T>(pub jws::Compact<ClaimsSet<T>, Empty>);
 #[serde(rename_all = "camelCase")]
 pub struct OAuthState {
     pub request_token: String,
-    // TODO: use session_id instead of session cookie.
-    // we're only using the cookie here because async_session only allows access
-    // SessionStore using a cookie.
-    pub session_cookie: String,
+    pub session_id: String,
     pub csrf_token: String,
 }
 
 impl OAuthState {
-    pub fn new(request_token: String, session_cookie: String, csrf_token: String) -> Self {
+    pub fn new(request_token: String, session_id: String, csrf_token: String) -> Self {
         Self {
             request_token,
-            session_cookie,
+            session_id,
             csrf_token,
         }
     }

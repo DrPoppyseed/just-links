@@ -5,7 +5,7 @@ use pockety::{models::PocketItem, Pockety};
 use serde::Serialize;
 use tracing::debug;
 
-use crate::{error::Error, session::SessionData, ApiResult, TypedResponse};
+use crate::{error::Error, session::AuthzedSessionData, ApiResult, TypedResponse};
 
 #[derive(Serialize)]
 pub struct GetArticlesResponse {
@@ -14,22 +14,16 @@ pub struct GetArticlesResponse {
 
 pub async fn get_articles(
     State(pockety): State<Pockety>,
-    session_data: SessionData,
+    session_data: AuthzedSessionData,
 ) -> ApiResult<GetArticlesResponse> {
     const LOG_TAG: &str = "[get_articles]";
     debug!("{LOG_TAG} start!");
-
-    let access_token = session_data
-        .access_token
-        .ok_or_else(|| Error::Pocket(format!("I couldn't find your access_token")))?;
-
-    debug!("{LOG_TAG} making pocket fetch request with access_token: {access_token}");
 
     let since = Utc::now() - Duration::days(7);
 
     pockety
         .retrieve()
-        .access_token(access_token)
+        .access_token(session_data.access_token)
         .since(since)
         .execute()
         .inspect_ok(|articles| debug!("{LOG_TAG} successfully fetched articles: {articles:?}"))

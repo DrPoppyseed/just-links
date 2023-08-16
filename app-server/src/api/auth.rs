@@ -22,7 +22,7 @@ use pockety::{
 use redis::AsyncCommands;
 use serde::{Deserialize, Serialize};
 use time::{Duration, OffsetDateTime};
-use tracing::{debug, error};
+use tracing::{debug, error, info};
 
 use crate::{
     error::{ApiError, Error},
@@ -76,7 +76,13 @@ pub async fn get_request_token(
         .await?;
 
     let stringified_session_data = serde_json::to_string(&session_data)?;
-    con.set(hashed_session_id.0, stringified_session_data)
+    con.set(hashed_session_id.0.clone(), stringified_session_data)
+        .inspect_ok(|_| {
+            info!(
+                "{LOG_TAG} Set new session: {} to store!",
+                hashed_session_id.0
+            );
+        })
         .map_err(|e| {
             error!("{LOG_TAG} Failed to store session. Error: {e:?}");
             Error::Session("Failed to store session".to_string())
@@ -114,14 +120,13 @@ pub async fn get_request_token(
 #[derive(Deserialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct GetAccessTokenRequest {
-    pub state: Option<String>,
+    pub state: String,
 }
 
 #[derive(Serialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct GetAccessTokenResponse {
     pub username: String,
-    pub state: Option<String>,
 }
 
 #[axum::debug_handler(state = AppState)]
@@ -139,15 +144,11 @@ pub async fn get_access_token(
         request_token,
         session_id,
         csrf_token,
-    } = body
-        .state
-        .clone()
-        .ok_or(Error::Api(ApiError::BadRequest(
-            "Missing state param".to_string(),
-        )))
-        .and_then(|token| {
-            OAuthState::from_token(token, config.jws_signing_secret, config.jwe_encryption_key)
-        })?;
+    } = OAuthState::from_token(
+        body.state.clone(),
+        config.jws_signing_secret,
+        config.jwe_encryption_key,
+    )?;
 
     // Make sure the session is valid before requesting the access token from pocket.com
     let mut con = session_store
@@ -158,10 +159,13 @@ pub async fn get_access_token(
         })
         .await?;
 
-    let hashed_session_id = hash(&session_id)?;
+    let hashed_session_id = hash(&session_id);
     let hashed_session_id = hashed_session_id.as_str();
     let session_data = con
-        .get(hashed_session_id.clone())
+        .get(hashed_session_id)
+        .inspect_ok(|_| {
+            info!("{LOG_TAG} Found session: {hashed_session_id} in store!")
+        })
         .map_err(|e| {
             error!("{LOG_TAG} failed to retrieve session: {hashed_session_id} with error: {e:?}");
             Error::Session("Failed to get session.".to_string())
@@ -175,25 +179,21 @@ pub async fn get_access_token(
         .await?;
 
     // compare csrf_token in request with csrf_token in session
-    // TODO: probably use matches!
     if csrf_token != session_data.csrf_token.clone() {
         return Err(Error::Api(ApiError::Unauthorized(
             "CSRF token doesn't match".to_string(),
         )));
     }
 
-    // TODO: Should I fill `state` in?
     let res: PocketyGetAccessTokenResponse = pockety
-        .get_access_token(request_token.clone(), None)
+        .get_access_token(request_token.clone())
         .inspect_ok(|r| debug!("{LOG_TAG} successfully acquired access_token from pocket: {r:?}"))
         .inspect_err(|e| debug!("{LOG_TAG} failed to get access_token from pocket: {e:?}"))
         .map_err(Error::from)
         .await?;
 
-    // TODO: create new session with new crsf token, and destroy previous session
-
-    con
-        .del(hashed_session_id.clone())
+    // create new session with new crsf token and destroy previous session
+    con.del(hashed_session_id)
         .map_err(|e| {
             // TODO: consider whether failing to destroy an old session should fail the entire
             // request
@@ -209,8 +209,7 @@ pub async fn get_access_token(
     };
 
     let stringified_session_data = serde_json::to_string(&session_data)?;
-    con
-        .set(hashed_session_id.0.clone(), stringified_session_data)
+    con.set(hashed_session_id.0.clone(), stringified_session_data)
         .map_err(|e| {
             error!(
                 "{LOG_TAG} failed to set new session: {} with error: {e:?}",
@@ -237,7 +236,6 @@ pub async fn get_access_token(
 
     Ok(TypedResponse::new(Some(GetAccessTokenResponse {
         username: res.username.clone(),
-        state: res.state,
     }))
     .headers(Some(headers)))
 }

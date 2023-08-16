@@ -13,9 +13,10 @@ rand = "0.8"
 futures = "0.3"
 time = "0.3"
 base64 = "0.21"
+base64ct = { version = "1.6", features = ["alloc"] }
 sha3 = "0.10"
-async-trait = "0.1.73"
-chrono = "0.4.26"
+async-trait = "0.1"
+chrono = "0.4"
 
 axum = { version = "0.6", features = ["headers", "macros"] }
 axum-extra = { version = "0.7", features = ["cookie"] }
@@ -24,8 +25,8 @@ tower-http = { version = "0.4", features = ["cors", "timeout", "trace"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 biscuit = "0.6"
-redis = "0.23"
-bb8 = "0.8.1"
-bb8-redis = "0.13.1"
+redis = { version = "0.23", features = ["tokio-comp"] }
+bb8 = "0.8"
+bb8-redis = "0.13"
 
 pockety = { git = "https://github.com/DrPoppyseed/pockety.git" }

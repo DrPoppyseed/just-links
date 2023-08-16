@@ -2,8 +2,7 @@ version: '3'
 
 services:
   redis:
-    container_name: 'jl_redis'
-    image: 'redis:7'
+    image: redis:7
+    command: redis-server
     ports:
-      - 6379:6379
-
+      - "6379:6379"

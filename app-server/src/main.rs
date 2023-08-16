@@ -22,7 +22,7 @@ use biscuit::{jwk::JWK, jws::Secret};
 use dotenvy::dotenv;
 use pockety::Pockety;
 use tower_http::{cors::CorsLayer, trace};
-use tracing::Level;
+use tracing::{debug, info, Level};
 
 #[tokio::main]
 async fn main() {
@@ -54,17 +54,18 @@ async fn main() {
         jwe_encryption_key,
     };
 
-    let manager =
-        RedisConnectionManager::new(redis_url).expect("Failed to build redis connection manager");
+    let manager = RedisConnectionManager::new(redis_url.clone())
+        .expect("Failed to build redis connection manager");
     let pool = Pool::builder()
         .build(manager)
         .await
         .expect("Failed to build redis pool");
+    debug!("Initialized Redis connection pool with redis_url: {redis_url}");
 
+    let user_agent_url = env::var("USER_AGENT_URL").expect("Missing USER_AGENT_URL");
     let cors_layer = CorsLayer::new()
         .allow_origin([
-            "http://localhost:5173".parse().unwrap(),
-            "http://127.0.0.1:5173".parse().unwrap(),
+            user_agent_url.parse().unwrap(),
             "https://getpocket.com".parse().unwrap(),
         ])
         .allow_headers([
@@ -78,7 +79,7 @@ async fn main() {
 
     let pocket_consumer_key = env::var("POCKET_CONSUMER_KEY").expect("Missing POCKET_CONSUMER_KEY");
     let pocket_redirect_uri = env::var("POCKET_REDIRECT_URI").expect("Missing POCKET_REDIRECT_URI");
-    tracing::debug!("Initializing Pockety instance with consumer_key: {pocket_consumer_key} and redirect_uri: {pocket_redirect_uri}.");
+    debug!("Initializing Pockety instance with consumer_key: {pocket_consumer_key} and redirect_uri: {pocket_redirect_uri}.");
 
     let pockety = Pockety::new(pocket_consumer_key, pocket_redirect_uri.as_str())
         .expect("Failed to initialize Pockety instance.");
@@ -103,7 +104,7 @@ async fn main() {
         .with_state(app_state);
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 8080));
-    tracing::info!("Listening on {addr}");
+    info!("Listening on {addr}");
 
     Server::bind(&addr)
         .serve(app.into_make_service())

@@ -34,7 +34,7 @@ const URL_SAFE_ENGINE: GeneralPurpose =
 
 pub struct JwsEncoded<T>(pub jws::Compact<ClaimsSet<T>, Empty>);
 
-#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct OAuthState {
     pub request_token: String,
@@ -144,8 +144,6 @@ impl Jwt {
         T: Serialize + Clone + fmt::Debug,
         for<'de> T: Deserialize<'de>,
     {
-        println!("token: {:?}", token);
-
         let jwe_decrypted = JWE::<T, Empty, Empty>::new_encrypted(token)
             .into_decrypted(
                 &jwe_key.into(),

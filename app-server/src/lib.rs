@@ -115,3 +115,4 @@ impl FromRef<AppState> for Arc<Pool<RedisConnectionManager>> {
         state.session_store.clone()
     }
 }
+

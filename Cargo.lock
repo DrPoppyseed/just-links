@@ -49,6 +49,7 @@ dependencies = [
  "axum",
  "axum-extra",
  "base64 0.21.2",
+ "base64ct",
  "bb8",
  "bb8-redis",
  "biscuit",
@@ -198,6 +199,12 @@ name = "base64"
 version = "0.21.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "604178f6c5c21f02dc555784810edfb88d34ac2c73b2eae109655649ee73ce3d"
+
+[[package]]
+name = "base64ct"
+version = "1.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8c3c1a368f70d6cf7302d78f8f7093da241fb8e8807c05cc9e51a125895a6d5b"
 
 [[package]]
 name = "bb8"
@@ -1099,7 +1106,7 @@ checksum = "26072860ba924cbfa98ea39c8c19b4dd6a4a25423dbdf219c1eca91aa0cf6964"
 [[package]]
 name = "pockety"
 version = "0.0.0"
-source = "git+https://github.com/DrPoppyseed/pockety.git#502f63fae6d48a3cceefe5f2040e74d6cfb0d375"
+source = "git+https://github.com/DrPoppyseed/pockety.git#bcfb5ab68cdc0d0486af6e58ee1246b42cb62ca8"
 dependencies = [
  "async-trait",
  "chrono",
@@ -1383,9 +1390,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.104"
+version = "1.0.105"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "076066c5f1078eac5b722a31827a8832fe108bed65dfa75e233c89f8206e976c"
+checksum = "693151e1ac27563d6dbcec9dee9fbd5da8539b20fa14ad3752b2e6d363ace360"
 dependencies = [
  "indexmap 2.0.0",
  "itoa",

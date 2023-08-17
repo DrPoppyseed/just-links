@@ -2,24 +2,20 @@
   import { onMount } from "svelte";
   import axios from "axios";
   import { session } from "./store";
-
-  type Article = any;
-  type Articles = Option<Array<Article>>;
+  import {type Article} from './schemas'
 
   let loading = false;
-  let articles: Articles = null;
+  let articles: Option<Array<Article>> = null;
 
   // fetch session info and save in memory
   onMount(async () => {
     if ($session.isLoggedIn) {
       loading = true;
 
-      const getArticlesRes = await axios.get<{ articles: Articles }>(
+      const getArticlesRes = await axios.get<{ articles: Array<Article> }>(
         "http://localhost:8080/articles",
         { withCredentials: true }
       );
-
-      console.log({ getArticlesRes });
 
       if (getArticlesRes.data.articles) {
         articles = getArticlesRes.data.articles;
@@ -31,7 +27,7 @@
 </script>
 
 {#if $session.isLoggedIn}
-  {#if loading || articles === null}
+  {#if loading === null}
     <p>loading!</p>
   {:else}
     <ul>
@@ -47,3 +43,5 @@
     </form>
   </div>
 {/if}
+
+

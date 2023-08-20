@@ -1,8 +1,8 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
   import { onMount } from "svelte";
-  import axios from "axios";
   import { session } from "../store";
+  import { authz } from "../api";
 
   let loading = false;
 
@@ -12,26 +12,16 @@
     const urlParams = new URLSearchParams(window.location.search);
     const stateParam = urlParams.get("state");
 
-    const res = await axios.post<{
-      username: Option<string>;
-    }>(
-      "http://localhost:8080/auth/authz",
-      {
-        state: stateParam || null,
-      },
-      {
-        withCredentials: true,
-      }
-    );
+    const authzRes = await authz(stateParam);
 
     loading = false;
-    if (res.status === 200 && res.data.username) {
+    if (authzRes.status === 200 && authzRes.data.username) {
       $session.isLoggedIn = true;
-      $session.username = res.data.username;
+      $session.username = authzRes.data.username;
       goto("/", { replaceState: true });
     } else {
       console.error(
-        `failed to authorize. received response: ${JSON.stringify(res)}`
+        `failed to authorize. received response: ${JSON.stringify(authzRes)}`
       );
       return;
     }

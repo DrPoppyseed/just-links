@@ -19,9 +19,9 @@ use redis::AsyncCommands;
 use serde::{Deserialize, Serialize};
 use sha3::{Digest, Sha3_256};
 
-use crate::{error, COOKIE_NAME};
+use crate::{error, SESSION_ID_COOKIE_NAME};
 
-pub type ConnPool = Pool<RedisConnectionManager>;
+pub type ConPool = Pool<RedisConnectionManager>;
 
 const SESSION_ID_LEN: usize = 64;
 
@@ -57,13 +57,13 @@ pub struct RequestTokenSessionData {
 #[serde(rename_all = "camelCase")]
 pub struct AuthzedSessionData {
     pub access_token: String,
-    pub username: Option<String>,
+    pub username: String,
 }
 
 #[async_trait]
 impl<S> FromRequestParts<S> for AuthzedSessionData
 where
-    Arc<ConnPool>: FromRef<S>,
+    Arc<ConPool>: FromRef<S>,
     S: Send + Sync,
 {
     type Rejection = Error;
@@ -86,10 +86,10 @@ where
         tracing::debug!("found cookies: {cookies:#?}");
 
         let session_cookie = cookies
-            .get(COOKIE_NAME)
+            .get(SESSION_ID_COOKIE_NAME)
             .ok_or(Error::Cookie("missing cookie".to_string()))?;
 
-        let pool = Arc::<ConnPool>::from_ref(state);
+        let pool = Arc::<ConPool>::from_ref(state);
         let mut con = pool
             .get_owned()
             .map_err(|e| {

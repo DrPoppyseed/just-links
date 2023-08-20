@@ -21,7 +21,7 @@ pub mod error;
 pub mod oauth;
 pub mod session;
 
-pub static COOKIE_NAME: &str = "ID";
+pub static SESSION_ID_COOKIE_NAME: &str = "ID";
 
 pub type ApiResult<R> = Result<TypedResponse<R>, Error>;
 
@@ -115,4 +115,3 @@ impl FromRef<AppState> for Arc<Pool<RedisConnectionManager>> {
         state.session_store.clone()
     }
 }
-

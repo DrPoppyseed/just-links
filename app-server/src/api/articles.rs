@@ -1,5 +1,5 @@
 use axum::extract::State;
-use chrono::{Utc, Duration};
+use chrono::{Duration, Utc};
 use futures::TryFutureExt;
 use pockety::{models::PocketItem, Pockety};
 use serde::Serialize;
@@ -17,10 +17,8 @@ pub async fn get_articles(
     session_data: AuthzedSessionData,
 ) -> ApiResult<GetArticlesResponse> {
     const LOG_TAG: &str = "[get_articles]";
-    debug!("{LOG_TAG} start!");
 
     let since = Utc::now() - Duration::days(7);
-
     pockety
         .retrieve()
         .access_token(session_data.access_token)

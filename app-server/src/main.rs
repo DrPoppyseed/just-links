@@ -3,7 +3,7 @@ use std::{env, net::SocketAddr, sync::Arc};
 use app_server::{
     api::{
         articles::get_articles,
-        auth::{get_access_token, get_request_token},
+        auth::{get_access_token, get_request_token, get_session},
         health_check,
     },
     oauth::OAuthState,
@@ -95,6 +95,7 @@ async fn main() {
         .route("/articles", get(get_articles))
         .route("/auth/authn", post(get_request_token))
         .route("/auth/authz", post(get_access_token))
+        .route("/auth/session", get(get_session))
         .layer(cors_layer)
         .layer(
             trace::TraceLayer::new_for_http()

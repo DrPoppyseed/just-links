@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use axum::{
     extract::State,
+    headers,
     http::{
         header::{LOCATION, SET_COOKIE},
         HeaderMap,
@@ -9,11 +10,13 @@ use axum::{
         StatusCode,
     },
     Json,
+    TypedHeader,
 };
 use axum_extra::extract::cookie::{Cookie, Expiration};
 use bb8::Pool;
 use bb8_redis::RedisConnectionManager;
 use futures::TryFutureExt;
+use once_cell::sync::Lazy;
 use pockety::{
     GetAccessTokenResponse as PocketyGetAccessTokenResponse,
     GetRequestTokenResponse as PocketyGetRequestTokenResponse,
@@ -27,12 +30,12 @@ use tracing::{debug, error, info};
 use crate::{
     error::{ApiError, Error},
     oauth::{generate_csrf_token, OAuthState},
-    session::{generate_session_id, hash, AuthzedSessionData, RequestTokenSessionData},
+    session::{generate_session_id, hash, AuthzedSessionData, ConPool, RequestTokenSessionData},
     ApiResult,
     AppState,
     Config,
     TypedResponse,
-    COOKIE_NAME,
+    SESSION_ID_COOKIE_NAME,
 };
 
 #[derive(Serialize)]
@@ -45,10 +48,9 @@ pub struct GetRequestTokenResponse {
 pub async fn get_request_token(
     State(pockety): State<Pockety>,
     State(config): State<Config>,
-    State(session_store): State<Arc<Pool<RedisConnectionManager>>>,
+    State(session_store): State<Arc<ConPool>>,
 ) -> ApiResult<()> {
     const LOG_TAG: &str = "[get_request_token]";
-    debug!("{LOG_TAG} start!");
 
     // TODO: implement rate limiting
     // TODO: is there a way to check if a user is already authed?
@@ -138,8 +140,6 @@ pub async fn get_access_token(
 ) -> ApiResult<GetAccessTokenResponse> {
     const LOG_TAG: &str = "[get_access_token]";
 
-    debug!("{LOG_TAG} start! received request body: {body:?}");
-
     let OAuthState {
         request_token,
         session_id,
@@ -167,7 +167,7 @@ pub async fn get_access_token(
             info!("{LOG_TAG} Found session: {hashed_session_id} in store!")
         })
         .map_err(|e| {
-            error!("{LOG_TAG} failed to retrieve session: {hashed_session_id} with error: {e:?}");
+           error!("{LOG_TAG} failed to retrieve session: {hashed_session_id} with error: {e:?}");
             Error::Session("Failed to get session.".to_string())
         })
         .and_then(|session_data: String| async move {
@@ -205,7 +205,7 @@ pub async fn get_access_token(
     let (session_id, hashed_session_id) = generate_session_id()?;
     let session_data = AuthzedSessionData {
         access_token: res.access_token.clone(),
-        username: Some(res.username.clone()),
+        username: res.username.clone(),
     };
 
     let stringified_session_data = serde_json::to_string(&session_data)?;
@@ -222,7 +222,7 @@ pub async fn get_access_token(
     let mut headers = HeaderMap::new();
     headers.insert(
         SET_COOKIE,
-        Cookie::build(COOKIE_NAME, session_id.0)
+        Cookie::build(SESSION_ID_COOKIE_NAME, session_id.0)
             .http_only(true)
             .expires(Expiration::from(
                 OffsetDateTime::now_utc() + Duration::minutes(60),
@@ -238,4 +238,54 @@ pub async fn get_access_token(
         username: res.username.clone(),
     }))
     .headers(Some(headers)))
+}
+
+#[derive(Serialize, Default, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct GetSessionResponse {
+    has_session: bool,
+    username: Option<String>,
+}
+
+static NOT_AUTHZED_RESPONSE: Lazy<TypedResponse<GetSessionResponse>> =
+    Lazy::new(|| TypedResponse::new(Some(GetSessionResponse::default())));
+
+// responds with user authenticated or not
+pub async fn get_session(
+    State(session_store): State<Arc<Pool<RedisConnectionManager>>>,
+    TypedHeader(cookies): TypedHeader<headers::Cookie>,
+) -> ApiResult<GetSessionResponse> {
+    const LOG_TAG: &str = "[get_session]";
+
+    let session_cookie = match cookies.get(SESSION_ID_COOKIE_NAME) {
+        Some(cookie) => cookie,
+        None => return Ok(NOT_AUTHZED_RESPONSE.clone()),
+    };
+
+    let mut con = match session_store.get_owned().await {
+        Ok(con) => con,
+        Err(_) => return Ok(NOT_AUTHZED_RESPONSE.clone()),
+    };
+
+    let hashed_session_id = hash(session_cookie);
+    match con
+        .get(hashed_session_id)
+        .map_err(|e| {
+            tracing::error!("{LOG_TAG} Failed to get SessionData with key: {session_cookie}. Error: {e}");
+            Error::Session("Failed to get SessionData".to_string())
+        })
+        .and_then(|v: String| async move {
+            serde_json::from_str::<AuthzedSessionData>(v.as_str()).map_err(|e| {
+                tracing::error!("{LOG_TAG} Failed to deserialize string into SessionData. Error: {e}");
+                Error::Session("Failed to deserialize. internal error!".to_string())
+            })
+        })
+        .await
+    {
+        Ok(session_data) => Ok(TypedResponse::new(Some(GetSessionResponse {
+            has_session: true,
+            username: Some(session_data.username),
+        }))),
+        Err(_) => Ok(NOT_AUTHZED_RESPONSE.clone()),
+    }
 }

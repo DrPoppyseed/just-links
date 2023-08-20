@@ -9,7 +9,6 @@ export const itemImageSchema = z.object({
   caption: z.string(),
   credit: z.string(),
 })
-
 export type ItemImage = z.infer<typeof itemImageSchema>
 
 export const itemVideoSchema = z.object({
@@ -20,7 +19,6 @@ export const itemVideoSchema = z.object({
   length: z.string().optional(),
   vid: z.string()
 })
-
 export type ItemVideo = z.infer<typeof itemVideoSchema>
 
 export const articleSchema = z.object({
@@ -53,5 +51,19 @@ export const articleSchema = z.object({
   top_image_url: z.string().optional(),
   domain_metadata: z.any().optional()
 })
-
 export type Article = z.infer<typeof articleSchema>
+
+export const apiGetSessionResSchema = z.object({
+  username: z.string().optional()
+})
+export type ApiGetSessionRes = z.infer<typeof apiGetSessionResSchema>
+
+export const apiGetArticlesResSchema = z.object({
+  articles: articleSchema.array().default([])
+})
+export type ApiGetArticlesRes = z.infer<typeof apiGetArticlesResSchema>
+
+export const apiAuthzResSchema = z.object({
+  username: z.string().optional()
+})
+export type ApiAuthzRes = z.infer<typeof apiAuthzResSchema>

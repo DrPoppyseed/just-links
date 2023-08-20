@@ -1,27 +1,33 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import axios from "axios";
   import { session } from "./store";
-  import {type Article} from './schemas'
+  import type { Article } from "./schemas";
+  import { getSession, getArticles } from "./api";
 
   let loading = false;
-  let articles: Option<Array<Article>> = null;
+  let articles: Array<Article> = [];
 
   // fetch session info and save in memory
   onMount(async () => {
-    if ($session.isLoggedIn) {
-      loading = true;
+    loading = true;
 
-      const getArticlesRes = await axios.get<{ articles: Array<Article> }>(
-        "http://localhost:8080/articles",
-        { withCredentials: true }
-      );
+    // the service-worker should have a cached response for this, so we don't
+    // expect to actually fetch from the backend for most cases
+    const getSessionRes = await getSession();
+    if (getSessionRes.status == 200 && getSessionRes.data.username) {
+      $session.isLoggedIn = true;
+      $session.username = getSessionRes.data.username;
 
+      const getArticlesRes = await getArticles();
       if (getArticlesRes.data.articles) {
         articles = getArticlesRes.data.articles;
       }
 
       loading = false;
+    } else {
+      loading = false;
+      $session.isLoggedIn = false;
+      $session.username = null;
     }
   });
 </script>
@@ -38,10 +44,11 @@
   {/if}
 {:else}
   <div class="flex flex-col items-center">
-    <form action="http://localhost:8080/auth/authn" method="POST">
+    <form
+      action={`${import.meta.env.VITE_PUBLIC_APP_SERVER_BASE_URL}/auth/authn`}
+      method="POST"
+    >
       <button type="submit">Authorize with Pocket</button>
     </form>
   </div>
 {/if}
-
-

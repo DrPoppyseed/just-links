@@ -1,5 +1,5 @@
 import axios, { type AxiosResponse } from "axios";
-import type { ApiAuthzRes, ApiGetArticlesRes, ApiGetSessionRes } from "./schemas"
+import type { ApiAuthzRes, ApiGetArticlesRes, ApiGetSessionRes } from "./types"
 
 export const authz = async (stateParam: Option<string>): Promise<AxiosResponse<ApiAuthzRes>> => {
   return axios.post(

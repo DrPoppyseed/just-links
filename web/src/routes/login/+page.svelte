@@ -1,8 +1,8 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
   import { onMount } from "svelte";
-  import { session } from "../store";
-  import { authz } from "../api";
+  import { session } from "$lib/store";
+  import { authz } from "$lib/api";
 
   let loading = false;
 

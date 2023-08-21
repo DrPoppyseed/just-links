@@ -5,7 +5,6 @@
   import { getSession, getArticles } from "$lib/api";
   import ArticleCard from "$lib/components/ArticleCard.svelte";
   import SignUpButton from "$lib/components/SignUpButton.svelte";
-  import SiteFooter from "$lib/components/SiteFooter.svelte";
 
   let loading = false;
   let articles: Array<Article> = [];

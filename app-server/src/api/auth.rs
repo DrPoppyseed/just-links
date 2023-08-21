@@ -5,12 +5,9 @@ use axum::{
     headers,
     http::{
         header::{LOCATION, SET_COOKIE},
-        HeaderMap,
-        HeaderValue,
-        StatusCode,
+        HeaderMap, HeaderValue, StatusCode,
     },
-    Json,
-    TypedHeader,
+    Json, TypedHeader,
 };
 use axum_extra::extract::cookie::{Cookie, Expiration};
 use bb8::Pool;
@@ -19,8 +16,7 @@ use futures::TryFutureExt;
 use once_cell::sync::Lazy;
 use pockety::{
     GetAccessTokenResponse as PocketyGetAccessTokenResponse,
-    GetRequestTokenResponse as PocketyGetRequestTokenResponse,
-    Pockety,
+    GetRequestTokenResponse as PocketyGetRequestTokenResponse, Pockety,
 };
 use redis::AsyncCommands;
 use serde::{Deserialize, Serialize};
@@ -31,11 +27,7 @@ use crate::{
     error::{ApiError, Error},
     oauth::{generate_csrf_token, OAuthState},
     session::{generate_session_id, hash, AuthzedSessionData, ConPool, RequestTokenSessionData},
-    ApiResult,
-    AppState,
-    Config,
-    TypedResponse,
-    SESSION_ID_COOKIE_NAME,
+    ApiResult, Config, TypedResponse, SESSION_ID_COOKIE_NAME,
 };
 
 #[derive(Serialize)]
@@ -131,7 +123,6 @@ pub struct GetAccessTokenResponse {
     pub username: String,
 }
 
-#[axum::debug_handler(state = AppState)]
 pub async fn get_access_token(
     State(pockety): State<Pockety>,
     State(config): State<Config>,
@@ -271,12 +262,16 @@ pub async fn get_session(
     match con
         .get(hashed_session_id)
         .map_err(|e| {
-            tracing::error!("{LOG_TAG} Failed to get SessionData with key: {session_cookie}. Error: {e}");
+            tracing::error!(
+                "{LOG_TAG} Failed to get SessionData with key: {session_cookie}. Error: {e}"
+            );
             Error::Session("Failed to get SessionData".to_string())
         })
         .and_then(|v: String| async move {
             serde_json::from_str::<AuthzedSessionData>(v.as_str()).map_err(|e| {
-                tracing::error!("{LOG_TAG} Failed to deserialize string into SessionData. Error: {e}");
+                tracing::error!(
+                    "{LOG_TAG} Failed to deserialize string into SessionData. Error: {e}"
+                );
                 Error::Session("Failed to deserialize. internal error!".to_string())
             })
         })

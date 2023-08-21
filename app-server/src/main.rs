@@ -7,14 +7,12 @@ use app_server::{
         health_check,
     },
     oauth::OAuthState,
-    AppState,
-    Config,
+    AppState, Config,
 };
 use axum::{
     http::Method,
     routing::{get, post},
-    Router,
-    Server,
+    Router, Server,
 };
 use bb8::Pool;
 use bb8_redis::RedisConnectionManager;
@@ -26,7 +24,7 @@ use tracing::{debug, info, Level};
 
 #[tokio::main]
 async fn main() {
-    dotenv().expect(".env file not found");
+    dotenv().ok();
 
     tracing_subscriber::fmt()
         .with_max_level(tracing::Level::DEBUG)

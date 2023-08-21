@@ -1,11 +1,47 @@
 use axum::extract::State;
 use chrono::{Duration, Utc};
 use futures::TryFutureExt;
-use pockety::{models::PocketItem, Pockety};
+use pockety::{
+    models::{ItemHas, ItemImage, ItemStatus, ItemVideo, PocketItem, Timestamp},
+    Pockety,
+};
 use serde::Serialize;
 use tracing::debug;
 
 use crate::{error::Error, session::AuthzedSessionData, ApiResult, TypedResponse};
+
+#[derive(Serialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct Article {
+    pub item_id: String,
+    pub resolved_id: Option<String>,
+    pub given_url: Option<String>,
+    pub given_title: Option<String>,
+    pub favorite: Option<String>,
+    pub status: ItemStatus,
+    pub time_added: Option<Timestamp>,
+    pub time_updated: Option<Timestamp>,
+    pub time_read: Option<Timestamp>,
+    pub time_favorited: Option<Timestamp>,
+    pub sort_id: Option<u32>,
+    pub resolved_url: Option<String>,
+    pub resolved_title: Option<String>,
+    pub excerpt: Option<String>,
+    pub is_article: Option<String>,
+    pub is_index: Option<String>,
+    pub has_image: Option<ItemHas>,
+    pub has_video: Option<ItemHas>,
+    pub word_count: Option<String>,
+    pub tags: Option<String>,
+    pub authors: Option<String>,
+    pub images: Option<Vec<ItemImage>>,
+    pub videos: Option<Vec<ItemVideo>>,
+    pub lang: Option<String>,
+    pub time_to_read: Option<u32>,
+    pub listen_duration_estimate: Option<u32>,
+    pub top_image_url: Option<String>,
+    pub domain_metadata: Option<serde_json::Value>,
+}
 
 #[derive(Serialize)]
 pub struct GetArticlesResponse {

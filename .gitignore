@@ -22,10 +22,12 @@ pnpm-debug.log*
 .DS_Store
 
 .vscode
+.idea
 
 # cache
 .dccache
 .svelte-kit
+.firebase
 
 # scrap files
 .scraps

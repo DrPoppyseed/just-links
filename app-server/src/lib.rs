@@ -1,5 +1,3 @@
-#![feature(result_option_inspect)]
-
 use std::sync::Arc;
 
 use axum::{

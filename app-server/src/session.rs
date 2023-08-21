@@ -5,8 +5,7 @@ use axum::{
     extract::{rejection::TypedHeaderRejectionReason, FromRef, FromRequestParts},
     headers,
     http::request::Parts,
-    RequestPartsExt,
-    TypedHeader,
+    RequestPartsExt, TypedHeader,
 };
 use base64::{engine::general_purpose, Engine as _};
 use base64ct::{Base64, Encoding};

@@ -30,5 +30,4 @@ redis = { version = "0.23", features = ["tokio-comp"] }
 bb8 = "0.8"
 bb8-redis = "0.13"
 
-# pockety = { git = "https://github.com/DrPoppyseed/pockety.git" }
-pockety = { path = "../../pockety/pockety/" }
+pockety = { git = "https://github.com/DrPoppyseed/pockety.git" }

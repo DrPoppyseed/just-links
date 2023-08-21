@@ -7,20 +7,12 @@ use base64::{
 };
 use biscuit::{
     jwa::{
-        ContentEncryptionAlgorithm,
-        EncryptionOptions,
-        KeyManagementAlgorithm,
-        SignatureAlgorithm,
+        ContentEncryptionAlgorithm, EncryptionOptions, KeyManagementAlgorithm, SignatureAlgorithm,
     },
     jwe,
     jwk::JWK,
     jws::{self, Secret},
-    ClaimsSet,
-    CompactPart,
-    Empty,
-    RegisteredClaims,
-    JWE,
-    JWT,
+    ClaimsSet, CompactPart, Empty, RegisteredClaims, JWE, JWT,
 };
 use rand::{thread_rng, RngCore};
 use serde::{Deserialize, Serialize};

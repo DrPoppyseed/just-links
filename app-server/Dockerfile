@@ -12,7 +12,10 @@ RUN cargo chef cook --release --recipe-path recipe.json
 COPY . .
 RUN cargo build --release --bin app-server
 
-FROM debian:bullseye AS runtime
+FROM debian:bullseye-slim AS runtime
+
+RUN apt-get update && apt install -y openssl &&rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 COPY --from=builder /app/target/release/app-server /usr/local/bin
 ENTRYPOINT ["/usr/local/bin/app-server"]

@@ -27,6 +27,8 @@ async fn main() {
     dotenv().ok();
 
     tracing_subscriber::fmt()
+        .pretty()
+        .with_ansi(false)
         .with_max_level(tracing::Level::DEBUG)
         .with_env_filter("app_server=debug")
         .compact()
@@ -77,7 +79,7 @@ async fn main() {
 
     let pocket_consumer_key = env::var("POCKET_CONSUMER_KEY").expect("Missing POCKET_CONSUMER_KEY");
     let pocket_redirect_uri = env::var("POCKET_REDIRECT_URI").expect("Missing POCKET_REDIRECT_URI");
-    debug!("Initializing Pockety instance with consumer_key: {pocket_consumer_key} and redirect_uri: {pocket_redirect_uri}.");
+    debug!("Initializing Pockety instance.");
 
     let pockety = Pockety::new(pocket_consumer_key, pocket_redirect_uri.as_str())
         .expect("Failed to initialize Pockety instance.");
@@ -102,7 +104,7 @@ async fn main() {
         )
         .with_state(app_state);
 
-    let addr = SocketAddr::from(([127, 0, 0, 1], 8080));
+    let addr = SocketAddr::from(([0, 0, 0, 0], 8080));
     info!("Listening on {addr}");
 
     Server::bind(&addr)

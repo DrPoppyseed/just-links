@@ -24,7 +24,7 @@ axum-extra = { version = "0.7", features = ["cookie"] }
 tower = "0.4"
 tower-http = { version = "0.4", features = ["cors", "timeout", "trace"] }
 tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tracing-subscriber = { version = "0.3", features = ["env-filter", "ansi"] }
 biscuit = "0.6"
 redis = { version = "0.23", features = ["tokio-comp"] }
 bb8 = "0.8"

@@ -25,8 +25,9 @@ tower = "0.4"
 tower-http = { version = "0.4", features = ["cors", "timeout", "trace"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "ansi"] }
+redis = { version = "0.23.2", features = ["tokio-rustls-comp", "tls-rustls-insecure"] }
+deadpool-redis = "0.12.0"
 biscuit = "0.6"
-redis = { version = "0.23", features = ["tokio-comp"] }
 bb8 = "0.8"
 bb8-redis = "0.13"
 

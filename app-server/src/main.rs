@@ -1,4 +1,4 @@
-use std::{env, net::SocketAddr, sync::Arc};
+use std::{env, net::SocketAddr, str::FromStr, sync::Arc};
 
 use app_server::{
     api::{
@@ -47,12 +47,15 @@ async fn main() {
         Default::default(),
     );
 
-    let redis_url: String = env::var("REDIS_URL").expect("Missing REDIS_URL");
-
     let config = Config {
         jws_signing_secret,
         jwe_encryption_key,
     };
+
+    let redis_url: String = env::var("REDIS_URL").expect("Missing REDIS_URL");
+    let redis_tls: bool =
+        <bool as FromStr>::from_str(&env::var("REDIS_TLS").expect("Missing REDIS_TLS"))
+            .expect("Failed to convert REDIS_TLS value to boolean.");
 
     let manager = RedisConnectionManager::new(redis_url.clone())
         .expect("Failed to build redis connection manager");
@@ -60,7 +63,7 @@ async fn main() {
         .build(manager)
         .await
         .expect("Failed to build redis pool");
-    debug!("Initialized Redis connection pool with redis_url: {redis_url}");
+    debug!("Initialized Redis connection pool");
 
     let user_agent_url = env::var("USER_AGENT_URL").expect("Missing USER_AGENT_URL");
     let cors_layer = CorsLayer::new()

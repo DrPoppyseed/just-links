@@ -47,7 +47,7 @@ impl From<biscuit::errors::Error> for Error {
 
 impl IntoResponse for Error {
     fn into_response(self) -> Response {
-        tracing::error!("{self:#?}");
+        tracing::error!("{self:?}");
 
         let (status, error_message) = match self {
             Error::Cookie(_) | Error::Api(ApiError::BadRequest(_)) => {

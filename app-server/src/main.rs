@@ -1,4 +1,4 @@
-use std::{env, net::SocketAddr, str::FromStr, sync::Arc};
+use std::{env, net::SocketAddr, sync::Arc};
 
 use app_server::{
     api::{
@@ -53,10 +53,6 @@ async fn main() {
     };
 
     let redis_url: String = env::var("REDIS_URL").expect("Missing REDIS_URL");
-    let redis_tls: bool =
-        <bool as FromStr>::from_str(&env::var("REDIS_TLS").expect("Missing REDIS_TLS"))
-            .expect("Failed to convert REDIS_TLS value to boolean.");
-
     let manager = RedisConnectionManager::new(redis_url.clone())
         .expect("Failed to build redis connection manager");
     let pool = Pool::builder()
@@ -77,7 +73,7 @@ async fn main() {
             "Accept".parse().unwrap(),
             "Origin".parse().unwrap(),
         ])
-        .allow_methods([Method::GET, Method::POST])
+        .allow_methods([Method::GET, Method::POST, Method::OPTIONS])
         .allow_credentials(true);
 
     let pocket_consumer_key = env::var("POCKET_CONSUMER_KEY").expect("Missing POCKET_CONSUMER_KEY");

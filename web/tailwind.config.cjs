@@ -1,4 +1,4 @@
-const defaultTheme = require('tailwindcss/defaultTheme')
+const defaultTheme = require("tailwindcss/defaultTheme");
 
 /** @type {import('tailwindcss').Config} */
 module.exports = {
@@ -6,8 +6,8 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        'serif': ['Cormorant Garamond', ...defaultTheme.fontFamily.serif]
-      }
+        serif: ["Cormorant Garamond", ...defaultTheme.fontFamily.serif],
+      },
     },
   },
   plugins: [],

@@ -14,7 +14,9 @@ RUN cargo build --release --bin app-server
 
 FROM debian:bullseye-slim AS runtime
 
-RUN apt-get update && apt install -y openssl &&rm -rf /var/lib/apt/lists/*
+RUN apt-get update \
+	&& apt install -y openssl ca-certificates\
+	&& rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 COPY --from=builder /app/target/release/app-server /usr/local/bin

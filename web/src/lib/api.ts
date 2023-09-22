@@ -15,13 +15,17 @@ export const authz = async (
   );
 
 export const getSession = async (): Promise<AxiosResponse<ApiGetSessionRes>> =>
-  axios.get(`${import.meta.env.VITE_PUBLIC_APP_SERVER_BASE_URL}/auth/session`, {
-    withCredentials: true,
-  });
+  axios.get(`${import.meta.env.VITE_PUBLIC_APP_SERVER_BASE_URL}/auth/session`,
+    {
+      withCredentials: true,
+    }
+  );
 
 export const getArticles = async (): Promise<
   AxiosResponse<ApiGetArticlesRes>
 > =>
-  axios.get(`${import.meta.env.VITE_PUBLIC_APP_SERVER_BASE_URL}/articles`, {
-    withCredentials: true,
-  });
+  axios.get(`${import.meta.env.VITE_PUBLIC_APP_SERVER_BASE_URL}/articles`,
+    {
+      withCredentials: true,
+    }
+  );

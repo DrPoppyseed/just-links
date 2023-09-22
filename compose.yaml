@@ -12,7 +12,10 @@ services:
 
   app-server:
     container_name: app-server
-    build: app-server
+    build: 
+      context: app-server
+      args:
+        CARGO_FEATURES: "" # empty string to override redis-tls feature
     restart: always
     env_file: 
       - app-server/.env

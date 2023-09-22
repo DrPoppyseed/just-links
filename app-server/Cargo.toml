@@ -25,10 +25,14 @@ tower = "0.4"
 tower-http = { version = "0.4", features = ["cors", "timeout", "trace"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "ansi"] }
-redis = { version = "0.23.2", features = ["tokio-rustls-comp", "tls-rustls", "tls-rustls-insecure"] }
+redis = { version = "0.23.2", default-features = false }
 deadpool-redis = "0.12.0"
 biscuit = "0.6"
 bb8 = "0.8"
 bb8-redis = "0.13"
 
 pockety = { git = "https://github.com/DrPoppyseed/pockety.git" }
+
+[features]
+# Enable TLS in prod only
+redis-tls = ["redis/tls-rustls", "redis/tokio-rustls-comp"]

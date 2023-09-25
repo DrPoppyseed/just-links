@@ -10,23 +10,23 @@ services:
     networks:
       - network
 
-  app-server:
-    container_name: app-server
-    build: 
-      context: app-server
-      args:
-        CARGO_FEATURES: "" # empty string to override redis-tls feature
-    restart: always
-    env_file: 
-      - app-server/.env
-    depends_on:
-      - redis
-    ports:
-      - "8080:8080"
-    networks:
-      - network
-    links:
-      - redis
+  # app-server:
+  #   container_name: app-server
+  #   build: 
+  #     context: app-server
+  #     args:
+  #       CARGO_FEATURES: "" # empty string to override redis-tls feature
+  #   restart: always
+  #   env_file: 
+  #     - app-server/.env
+  #   depends_on:
+  #     - redis
+  #   ports:
+  #     - "8080:8080"
+  #   networks:
+  #     - network
+  #   links:
+  #     - redis
 
 networks:
   network:

@@ -22,7 +22,6 @@ use bb8_redis::RedisConnectionManager;
 use biscuit::{jwk::JWK, jws::Secret};
 use dotenvy::dotenv;
 use pockety::Pockety;
-use redis::cmd;
 use tower_http::{cors::CorsLayer, trace};
 use tracing::{debug, info, Level};
 
@@ -64,12 +63,6 @@ async fn main() {
         .await
         .expect("Failed to build redis pool");
     debug!("Initialized Redis connection pool");
-
-    // ping redis to ensure we can connect
-    let pool = pool.clone();
-    let conn = pool.get().await;
-    let reply: String = cmd("PING").query_async(&mut *conn.unwrap()).await.unwrap();
-    debug!("Redis connection pool health: {reply}");
 
     let user_agent_url = env::var("USER_AGENT_URL").expect("Missing USER_AGENT_URL");
     let cors_layer = CorsLayer::new()

@@ -6,7 +6,7 @@
   import ArticleCard from "$lib/components/ArticleCard.svelte";
   import SignUpButton from "$lib/components/SignUpButton.svelte";
 
-  let loading = false;
+  let loading = true;
   let articles: Array<Article> = [];
 
   // fetch session info and save in memory
@@ -35,8 +35,8 @@
 </script>
 
 <div class="px-8">
-  {#if $session.isLoggedIn}
-    {#if loading === null}
+  {#if $session.isLoggedIn || loading}
+    {#if loading}
       <p>loading!</p>
     {:else}
       <div>

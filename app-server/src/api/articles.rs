@@ -40,12 +40,45 @@ pub struct Article {
     pub time_to_read: Option<u32>,
     pub listen_duration_estimate: Option<u32>,
     pub top_image_url: Option<String>,
-    pub domain_metadata: Option<serde_json::Value>,
+}
+
+impl From<PocketItem> for Article {
+    fn from(item: PocketItem) -> Self {
+        Self {
+            item_id: item.item_id.0,
+            resolved_id: item.resolved_id.map(|id| id.0),
+            given_url: item.given_url,
+            given_title: item.given_title,
+            favorite: item.favorite,
+            status: item.status,
+            time_added: item.time_added,
+            time_updated: item.time_updated,
+            time_read: item.time_read,
+            time_favorited: item.time_favorited,
+            sort_id: item.sort_id,
+            resolved_url: item.resolved_url,
+            resolved_title: item.resolved_title,
+            excerpt: item.excerpt,
+            is_article: item.is_article,
+            is_index: item.is_index,
+            has_image: item.has_image,
+            has_video: item.has_video,
+            word_count: item.word_count,
+            tags: item.tags,
+            authors: item.authors,
+            images: item.images,
+            videos: item.videos,
+            lang: item.lang,
+            time_to_read: item.time_to_read,
+            listen_duration_estimate: item.listen_duration_estimate,
+            top_image_url: item.top_image_url,
+        }
+    }
 }
 
 #[derive(Serialize)]
 pub struct GetArticlesResponse {
-    articles: Vec<PocketItem>,
+    articles: Vec<Article>,
 }
 
 pub async fn get_articles(
@@ -60,9 +93,11 @@ pub async fn get_articles(
         .access_token(session_data.access_token)
         .since(since)
         .execute()
-        .inspect_ok(|articles| debug!("{LOG_TAG} successfully fetched articles: {articles:?}"))
         .inspect_err(|e| debug!("{LOG_TAG} failed to fetch articles with error: {e:?}"))
-        .map_ok(|articles| TypedResponse::new(Some(GetArticlesResponse { articles })))
+        .map_ok(|articles| {
+            let articles = articles.into_iter().map(Article::from).collect();
+            TypedResponse::new(Some(GetArticlesResponse { articles }))
+        })
         .map_err(Error::from)
         .await
 }

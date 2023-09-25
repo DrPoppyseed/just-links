@@ -3,16 +3,20 @@
   export let article: Article;
 
   // TODO: should probably be handled on the backend
-  const formatUrl = (): [string, string] => {
-    const url = new URL(article.resolvedUrl || article.givenUrl);
-    return [url.toString(), url.hostname];
+  const formatUrl = (url: string): [string, string] => {
+    const formattedUrl = new URL(url);
+    return [formattedUrl.toString(), formattedUrl.hostname];
   };
 
   // TODO: allow user to toggle absolute or relative date added
   const dateAdded = article.timeAdded
-    ? new Date(article.timeAdded).toLocaleDateString()
+    ? new Date(article.timeAdded * 1000).toLocaleDateString()
     : null;
-  const [url, hostname] = formatUrl();
+
+  const [url, hostname] =
+    article.resolvedUrl || article.givenUrl
+      ? formatUrl(article.resolvedUrl || article.givenUrl || "")
+      : [null, null];
 </script>
 
 <div class="border-b pt-1 pb-2 flex items-center space-x-2">

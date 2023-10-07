@@ -20,10 +20,12 @@ use pockety::{
 };
 use redis::AsyncCommands;
 use serde::{Deserialize, Serialize};
+use sqlx::PgPool;
 use time::{Duration, OffsetDateTime};
 use tracing::{debug, error, info};
 
 use crate::{
+    db::create_new_user_if_not_exists,
     error::{ApiError, Error},
     oauth::{generate_csrf_token, OAuthState},
     session::{generate_session_id, hash, AuthzedSessionData, ConPool, RequestTokenSessionData},
@@ -127,6 +129,7 @@ pub async fn get_access_token(
     State(pockety): State<Pockety>,
     State(config): State<Config>,
     State(session_store): State<Arc<Pool<RedisConnectionManager>>>,
+    State(db_pool): State<Arc<PgPool>>,
     body: Json<GetAccessTokenRequest>,
 ) -> ApiResult<GetAccessTokenResponse> {
     const LOG_TAG: &str = "[get_access_token]";
@@ -198,6 +201,8 @@ pub async fn get_access_token(
         access_token: res.access_token.clone(),
         username: res.username.clone(),
     };
+
+    let _res = create_new_user_if_not_exists(db_pool, &session_data.username).await?;
 
     let stringified_session_data = serde_json::to_string(&session_data)?;
     con.set(hashed_session_id.0.clone(), stringified_session_data)

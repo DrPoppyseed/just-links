@@ -22,6 +22,7 @@ use bb8_redis::RedisConnectionManager;
 use biscuit::{jwk::JWK, jws::Secret};
 use dotenvy::dotenv;
 use pockety::Pockety;
+use sqlx::{migrate, postgres::PgPoolOptions};
 use tower_http::{cors::CorsLayer, trace};
 use tracing::{debug, info, Level};
 
@@ -56,13 +57,26 @@ async fn main() {
     };
 
     let redis_url: String = env::var("REDIS_URL").expect("Missing REDIS_URL");
-    let manager = RedisConnectionManager::new(redis_url.clone())
-        .expect("Failed to build redis connection manager");
-    let pool = Pool::builder()
-        .build(manager)
+    let redis_connection_manager =
+        RedisConnectionManager::new(redis_url).expect("Failed to build redis connection manager");
+    let redis_connection_pool = Pool::builder()
+        .build(redis_connection_manager)
         .await
         .expect("Failed to build redis pool");
     debug!("Initialized Redis connection pool");
+
+    let postgres_url: String = env::var("DATABASE_URL").expect("Missing DATABASE_URL");
+    let postgres_connection_pool = PgPoolOptions::new()
+        .connect(&postgres_url)
+        .await
+        .expect("Failed to build postgres connection pool");
+    debug!("Initialized Postgres connection pool");
+
+    migrate!("./migrations")
+        .run(&postgres_connection_pool)
+        .await
+        .expect("Failed to migrate database");
+    debug!("Migrated Postgres database");
 
     let user_agent_url = env::var("USER_AGENT_URL").expect("Missing USER_AGENT_URL");
     let cors_layer = CorsLayer::new()
@@ -83,7 +97,8 @@ async fn main() {
 
     let app_state = AppState {
         pockety,
-        session_store: Arc::new(pool),
+        session_store: Arc::new(redis_connection_pool),
+        db: Arc::new(postgres_connection_pool),
         config,
     };
 

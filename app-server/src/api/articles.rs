@@ -2,7 +2,7 @@ use axum::extract::State;
 use chrono::{Duration, Utc};
 use futures::TryFutureExt;
 use pockety::{
-    models::{ItemHas, ItemImage, ItemStatus, ItemVideo, PocketItem, Timestamp},
+    models::{ItemAuthor, ItemHas, ItemImage, ItemStatus, ItemVideo, PocketItem, Timestamp},
     Pockety,
 };
 use serde::Serialize;
@@ -10,7 +10,7 @@ use tracing::debug;
 
 use crate::{error::Error, session::AuthzedSessionData, ApiResult, TypedResponse};
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Article {
     pub item_id: String,
@@ -33,7 +33,7 @@ pub struct Article {
     pub has_video: Option<ItemHas>,
     pub word_count: Option<String>,
     pub tags: Option<String>,
-    pub authors: Option<String>,
+    pub authors: Option<Vec<ItemAuthor>>,
     pub images: Option<Vec<ItemImage>>,
     pub videos: Option<Vec<ItemVideo>>,
     pub lang: Option<String>,

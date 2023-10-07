@@ -13,8 +13,10 @@ use error::Error;
 use oauth::OAuthState;
 use pockety::Pockety;
 use serde::Serialize;
+use sqlx::postgres::PgPool;
 
 pub mod api;
+pub mod db;
 pub mod error;
 pub mod oauth;
 pub mod session;
@@ -93,6 +95,7 @@ pub struct Config {
 pub struct AppState {
     pub pockety: Pockety,
     pub session_store: Arc<Pool<RedisConnectionManager>>,
+    pub db: Arc<PgPool>,
     pub config: Config,
 }
 
@@ -111,5 +114,11 @@ impl FromRef<AppState> for Config {
 impl FromRef<AppState> for Arc<Pool<RedisConnectionManager>> {
     fn from_ref(state: &AppState) -> Self {
         state.session_store.clone()
+    }
+}
+
+impl FromRef<AppState> for Arc<PgPool> {
+    fn from_ref(state: &AppState) -> Self {
+        state.db.clone()
     }
 }

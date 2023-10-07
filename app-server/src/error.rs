@@ -12,6 +12,7 @@ pub enum Error {
     Pocket(String),
     Jwt(String),
     Api(ApiError),
+    Db(String),
 }
 
 #[derive(Debug, Clone)]

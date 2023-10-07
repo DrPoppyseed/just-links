@@ -1,5 +1,3 @@
-ARG CARGO_FEATURES="--features redis-tls"
-
 # Compute a recipe file
 FROM rust:1-bullseye as planner
 WORKDIR /app
@@ -16,6 +14,7 @@ RUN cargo chef cook --release --recipe-path recipe.json
 
 # Build binary
 FROM rust:1-bullseye as builder
+ARG CARGO_FEATURES="--features rustls/tls-rustls rustls/tokio-rustls-comp"
 WORKDIR /app
 COPY . .
 # Copy over the cached dependencies from above

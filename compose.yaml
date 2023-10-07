@@ -7,26 +7,11 @@ services:
     command: redis-server
     ports:
       - "6379:6379"
-    networks:
-      - network
 
-  # app-server:
-  #   container_name: app-server
-  #   build: 
-  #     context: app-server
-  #     args:
-  #       CARGO_FEATURES: "" # empty string to override redis-tls feature
-  #   restart: always
-  #   env_file: 
-  #     - app-server/.env
-  #   depends_on:
-  #     - redis
-  #   ports:
-  #     - "8080:8080"
-  #   networks:
-  #     - network
-  #   links:
-  #     - redis
-
-networks:
-  network:
+  postgres:
+    container_name: postgres
+    image: postgres:16
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: example

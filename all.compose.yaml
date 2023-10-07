@@ -1,0 +1,31 @@
+version: '3'
+
+services:
+  redis:
+    container_name: redis
+    image: redis:7
+    command: redis-server
+    ports:
+      - "6379:6379"
+
+  mysql:
+    container_name: mysql
+    image: mysql:8
+    ports:
+      - "3306:3306"
+
+  app-server:
+    container_name: app-server
+    build: 
+      context: app-server
+      args:
+        CARGO_FEATURES: ""
+    restart: always
+    env_file: 
+      - app-server/.env
+    depends_on:
+      - redis
+    ports:
+      - "8080:8080"
+    links:
+      - redis

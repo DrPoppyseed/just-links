@@ -19,13 +19,13 @@
       : [null, null];
 </script>
 
-<div class="border-b pt-1 pb-2 flex items-center space-x-2">
+<div class="border-b pt-1 pb-2 flex items-center justify-between space-x-2">
   <div>
     <!--Try to display resolved_url and fallback to given_url if null-->
     <a href={url} class="text-xs text-blue-500">{hostname}</a>
-    <h3>{article.givenTitle}</h3>
+    <h3><a href={url}>{article.givenTitle}</a></h3>
     {#if article.timeAdded}
-      <p class="text-sm text-gray-500">{dateAdded}</p>
+      <p class="mt-1 text-sm text-gray-500">{dateAdded}</p>
     {/if}
   </div>
   {#if article.topImageUrl}

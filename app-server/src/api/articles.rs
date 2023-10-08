@@ -95,7 +95,11 @@ pub async fn get_articles(
         .execute()
         .inspect_err(|e| debug!("{LOG_TAG} failed to fetch articles with error: {e:?}"))
         .map_ok(|articles| {
-            let articles = articles.into_iter().map(Article::from).collect();
+            let articles = articles
+                .into_iter()
+                .map(Article::from)
+                .filter(|article| article.given_title.is_some() && article.given_url.is_some())
+                .collect();
             TypedResponse::new(Some(GetArticlesResponse { articles }))
         })
         .map_err(Error::from)

@@ -1,7 +1,6 @@
 <script lang="ts">
- import "../app.css";
+  import "../app.css";
   import SiteHeader from "$lib/components/SiteHeader.svelte";
-  import SiteFooter from "$lib/components/SiteFooter.svelte";
 
   let networkStatus: boolean = true;
 
@@ -31,7 +30,6 @@
   <div class="flex-1">
     <slot />
   </div>
-  <SiteFooter />
   {#if !networkStatus}
     <p class="bottom-0">offline!</p>
   {/if}

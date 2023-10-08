@@ -1,5 +1,5 @@
 <script lang="ts">
-  import "../app.css";
+ import "../app.css";
   import SiteHeader from "$lib/components/SiteHeader.svelte";
   import SiteFooter from "$lib/components/SiteFooter.svelte";
 

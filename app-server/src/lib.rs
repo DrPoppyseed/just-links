@@ -17,6 +17,7 @@ use sqlx::postgres::PgPool;
 
 pub mod api;
 pub mod db;
+pub mod domain;
 pub mod error;
 pub mod oauth;
 pub mod session;

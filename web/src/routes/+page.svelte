@@ -37,13 +37,11 @@
 <div class="px-8">
   {#if $session.isLoggedIn || loading}
     {#if loading}
-      <p>loading!</p>
+      <p class="mt-6">loading...</p>
     {:else}
-      <div>
-        {#each articles as article}
-          <ArticleCard {article} />
-        {/each}
-      </div>
+      {#each articles as article}
+        <ArticleCard {article} />
+      {/each}
     {/if}
   {:else}
     <div class="py-8 flex flex-col">

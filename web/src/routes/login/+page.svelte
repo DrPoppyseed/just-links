@@ -4,30 +4,43 @@
   import { session } from "$lib/store";
   import { authz } from "$lib/api";
 
-  let loading = false;
+  type FetchStatus = "success" | "loading" | "error";
+  let status: FetchStatus = "loading";
 
   onMount(async () => {
-    loading = true;
+    status = "loading";
 
     const urlParams = new URLSearchParams(window.location.search);
     const stateParam = urlParams.get("state");
 
-    const authzRes = await authz(stateParam);
+    try {
+      const authzRes = await authz(stateParam);
 
-    loading = false;
-    if (authzRes.status === 200 && authzRes.data.username) {
-      $session.isLoggedIn = true;
-      $session.username = authzRes.data.username;
+      if (authzRes.status === 200 && authzRes.data.username) {
+        $session.isLoggedIn = true;
+        $session.username = authzRes.data.username;
+        status = "success";
+      } else {
+        status = "error";
+      }
       goto("/", { replaceState: true });
-    } else {
+    } catch (error) {
+      status = "error";
       console.error(
-        `failed to authorize. received response: ${JSON.stringify(authzRes)}`
+        `failed to authorize. received response: ${JSON.stringify(error)}`
       );
-      return;
+      goto("/login", { replaceState: true });
     }
   });
 </script>
 
-{#if loading}
-  <p>loading...</p>
-{/if}
+<div class="flex flex-col p-6">
+  {#if status == "loading"}
+    <p>loading...</p>
+  {:else if status == "error"}
+    <p>
+      Failed to authenticate. Please
+      <a href="/" class="text-blue-600"> try again. </a>
+    </p>
+  {/if}
+</div>

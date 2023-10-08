@@ -12,7 +12,9 @@
     </div>
 
     {#if $session.isLoggedIn}
-      <Options />
+      <a href="/options">
+        <Options />
+      </a>
     {:else}
       <form
         action={`${import.meta.env.VITE_PUBLIC_APP_SERVER_BASE_URL}/auth/authn`}

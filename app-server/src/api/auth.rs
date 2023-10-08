@@ -25,7 +25,7 @@ use time::{Duration, OffsetDateTime};
 use tracing::{debug, error, info};
 
 use crate::{
-    db::create_new_user_if_not_exists,
+    db::{create_new_user_if_not_exists, fetch_user},
     error::{ApiError, Error},
     oauth::{generate_csrf_token, OAuthState},
     session::{generate_session_id, hash, AuthzedSessionData, ConPool, RequestTokenSessionData},
@@ -202,7 +202,12 @@ pub async fn get_access_token(
         username: res.username.clone(),
     };
 
-    let _res = create_new_user_if_not_exists(db_pool, &session_data.username).await?;
+    if fetch_user(db_pool.clone(), &session_data.username)
+        .await?
+        .is_none()
+    {
+        create_new_user_if_not_exists(db_pool.clone(), &session_data.username).await?;
+    }
 
     let stringified_session_data = serde_json::to_string(&session_data)?;
     con.set(hashed_session_id.0.clone(), stringified_session_data)

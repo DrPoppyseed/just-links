@@ -1,10 +1,80 @@
+use chrono::{DateTime, Utc};
 use futures::TryFutureExt;
 use std::sync::Arc;
 
 use sqlx::PgPool;
 use tracing::{error, info};
 
-use crate::{api::articles::Article, error::Error};
+use crate::{api::articles::Article, domain::User, error::Error};
+
+#[derive(Debug, Clone)]
+pub struct ArticleModel {
+    pub user_id: i32,
+    pub item_id: String,
+    pub resolved_id: Option<String>,
+    pub given_url: Option<String>,
+    pub given_title: Option<String>,
+    pub favorite: bool,
+    pub status: i32,
+    pub time_added: Option<i64>,
+    pub time_updated: Option<i64>,
+    pub time_read: Option<i64>,
+    pub time_favorited: Option<i64>,
+    pub sort_id: Option<i32>,
+    pub resolved_url: Option<String>,
+    pub resolved_title: Option<String>,
+    pub excerpt: Option<String>,
+    pub is_article: bool,
+    pub is_index: bool,
+    pub has_image: Option<i32>,
+    pub has_video: Option<i32>,
+    pub word_count: Option<i32>,
+    pub tags: Option<String>,
+    pub lang: Option<String>,
+    pub time_to_read: Option<i32>,
+    pub listen_duration_estimate: Option<i32>,
+    pub top_image_url: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+pub struct ArticleVideoModel {
+    pub article_id: i32,
+    pub item_id: String,
+    pub video_id: String,
+    pub src: String,
+    pub height: i32,
+    pub width: i32,
+    pub length: Option<i32>,
+    pub vid: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct ArticleImageModel {
+    pub article_id: i32,
+    pub item_id: String,
+    pub image_id: String,
+    pub src: String,
+    pub height: i32,
+    pub width: i32,
+    pub credit: String,
+    pub caption: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct ArticleAuthorModel {
+    pub article_id: i32,
+    pub author_id: String,
+    pub name: String,
+    pub url: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct UserModel {
+    pub username: String,
+    pub user_uuid: String,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
 
 pub fn convert_article_to_article_model(
     article: Article,
@@ -38,17 +108,11 @@ pub fn convert_article_to_article_model(
         excerpt: article.excerpt,
         is_article: article
             .is_article
-            .map(|is_article| match is_article.as_str() {
-                "0" => false,
-                _ => true,
-            })
+            .map(|is_article| !matches!(is_article.as_str(), "0"))
             .unwrap_or(true),
         is_index: article
             .is_index
-            .map(|is_index| match is_index.as_str() {
-                "0" => false,
-                _ => true,
-            })
+            .map(|is_index| !matches!(is_index.as_str(), "0"))
             .unwrap_or(true),
         has_image: article.has_image.map(|has_image| has_image.as_u8() as i32),
         has_video: article.has_video.map(|has_video| has_video.as_u8() as i32),
@@ -162,78 +226,37 @@ pub fn convert_article_to_article_author_models(
     Ok(article_author_models)
 }
 
-#[derive(Debug, Clone)]
-pub struct ArticleModel {
-    pub user_id: i32,
-    pub item_id: String,
-    pub resolved_id: Option<String>,
-    pub given_url: Option<String>,
-    pub given_title: Option<String>,
-    pub favorite: bool,
-    pub status: i32,
-    pub time_added: Option<i64>,
-    pub time_updated: Option<i64>,
-    pub time_read: Option<i64>,
-    pub time_favorited: Option<i64>,
-    pub sort_id: Option<i32>,
-    pub resolved_url: Option<String>,
-    pub resolved_title: Option<String>,
-    pub excerpt: Option<String>,
-    pub is_article: bool,
-    pub is_index: bool,
-    pub has_image: Option<i32>,
-    pub has_video: Option<i32>,
-    pub word_count: Option<i32>,
-    pub tags: Option<String>,
-    pub lang: Option<String>,
-    pub time_to_read: Option<i32>,
-    pub listen_duration_estimate: Option<i32>,
-    pub top_image_url: Option<String>,
+pub async fn fetch_user(pool: Arc<PgPool>, username: &str) -> Result<Option<User>, Error> {
+    sqlx::query!(
+        r#"
+    SELECT user_uuid, username, created_at, updated_at
+    FROM users 
+    WHERE username = $1"#,
+        username
+    )
+    .fetch_optional(&*pool)
+    .map_ok(|record| {
+        record.map(|record| User {
+            uuid: record.user_uuid.to_string(),
+            username: record.username,
+            created_at: record.created_at.with_timezone(&Utc),
+            updated_at: record.updated_at.with_timezone(&Utc),
+        })
+    })
+    .map_err(|e| {
+        error!("Failed to fetch user. Error: {e:?}");
+        Error::Db("Failed to fetch user.".to_string())
+    })
+    .await
 }
 
-#[derive(Debug, Clone)]
-pub struct ArticleVideoModel {
-    pub article_id: i32,
-    pub item_id: String,
-    pub video_id: String,
-    pub src: String,
-    pub height: i32,
-    pub width: i32,
-    pub length: Option<i32>,
-    pub vid: String,
-}
-
-#[derive(Debug, Clone)]
-pub struct ArticleImageModel {
-    pub article_id: i32,
-    pub item_id: String,
-    pub image_id: String,
-    pub src: String,
-    pub height: i32,
-    pub width: i32,
-    pub credit: String,
-    pub caption: String,
-}
-
-#[derive(Debug, Clone)]
-pub struct ArticleAuthorModel {
-    pub article_id: i32,
-    pub author_id: String,
-    pub name: String,
-    pub url: String,
-}
-
-pub async fn create_new_user_if_not_exists(
-    pool: Arc<PgPool>,
-    username: &str,
-) -> Result<i32, Error> {
-    let res = sqlx::query!(
+pub async fn create_new_user_if_not_exists(pool: Arc<PgPool>, username: &str) -> Result<(), Error> {
+    sqlx::query!(
         r#"
     INSERT INTO users (username)
     VALUES ($1)
     ON CONFLICT DO NOTHING
-    RETURNING id
-            "#,
+    RETURNING id"#,
         username
     )
     .fetch_one(&*pool)
@@ -241,11 +264,10 @@ pub async fn create_new_user_if_not_exists(
         error!("Failed to create new user. Error: {e:?}");
         Error::Db("Failed to create new user.".to_string())
     })
-    .inspect_ok(|res| info!("Created new user with username: {username}, id: {}", res.id))
+    .inspect_ok(|_| info!("Created new user with username: {username}"))
     .await?;
 
-    Ok(res.id)
-    // Ok(0)
+    Ok(())
 }
 
 pub async fn batch_sync_articles(
@@ -491,7 +513,42 @@ pub async fn batch_sync_articles(
         let article_author_models =
             convert_article_to_article_author_models(article, article_id.id)?;
 
-        for article_author_model in article_author_models {}
+        for article_author_model in article_author_models {
+            let _ = sqlx::query!(
+                r#"
+            INSERT INTO pocket_article_authors (
+                pocket_article_id, 
+                author_id, 
+                name, 
+                url
+            )
+            VALUES (
+                $1,
+                $2,
+                $3,
+                $4
+            )
+            ON CONFLICT (
+                pocket_article_id, 
+                author_id
+            ) 
+            DO UPDATE
+            SET
+            name = EXCLUDED.name, 
+            url = EXCLUDED.url
+            RETURNING id"#,
+                article_id.id,
+                article_author_model.author_id,
+                article_author_model.name,
+                article_author_model.url
+            )
+            .fetch_one(&*pool)
+            .map_err(|e| {
+                error!("Failed to insert article authors. Error: {e:?}");
+                Error::Db("Failed to insert article authors.".to_string())
+            })
+            .await?;
+        }
     }
 
     Ok(())

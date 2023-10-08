@@ -5,11 +5,10 @@ orbs:
 
 on-release: &on-release
   filters:
-    branches:
-      ignore: "/.*/"
     tags:
-      only:
-        - "/^\\d+(\\.\\d+){2}.*/"
+      only: /v.*/
+    branches:
+      ignore: /.*/
 
 executors:
   with-workspace:
@@ -61,8 +60,8 @@ workflows:
   build-and-push:
     jobs:
       - build:
-          <<: [ *on-release ]
+          <<: *on-release
       - push:
           requires:
             - build
-          <<: [ *on-release ]
+          <<: *on-release

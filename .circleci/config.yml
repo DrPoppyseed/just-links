@@ -24,16 +24,16 @@ jobs:
 
       - run:
           name: Tag Docker image
-          command: docker tag jl-app-server:$CIRCLE_TAG asia-northeast1-docker.pkg.dev/just-links-dotdev/jl-app-servers/jl-app-serve:$CIRCLE_TAG
+          command: docker tag jl-app-server:$CIRCLE_TAG asia-northeast1-docker.pkg.dev/just-links-dotdev/jl-app-servers/jl-app-server:$CIRCLE_TAG
 
       - run:
           name: Push Docker image to GCP Artifact Registry
           command: |
             gcloud auth configure-docker asia-northeast1-docker.pkg.dev
-            docker push asia-northeast1-docker.pkg.dev/just-links-dotdev/jl-app-servers/jl-app-serve:$CIRCLE_TAG
+            docker push asia-northeast1-docker.pkg.dev/just-links-dotdev/jl-app-servers/jl-app-server:$CIRCLE_TAG
 
 workflows:
-  build-and-push:
+  build-and-push-to-remote:
     jobs:
       - build-and-push:
           <<: [ *publish-tags ]

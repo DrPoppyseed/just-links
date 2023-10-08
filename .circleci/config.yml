@@ -5,11 +5,8 @@ orbs:
 
 on-release: &on-release
   filters:
-    branches:
-      ignore: /.*/
     tags:
-      only:
-        - /^v.*/
+      only: /^v.*/
 
 executors:
   with-workspace:
@@ -23,6 +20,9 @@ jobs:
     executor: with-workspace
     steps:
       - checkout
+
+      - run:
+          command: echo $CIRCLE_TAG
 
       - run:
           name: Build Docker image

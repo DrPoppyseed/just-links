@@ -21,10 +21,11 @@ export const getSession = async (): Promise<AxiosResponse<ApiGetSessionRes>> =>
     }
   );
 
-export const getArticles = async (): Promise<
+export const PER_PAGE = 30;
+export const getArticles = async (page: number = 0): Promise<
   AxiosResponse<ApiGetArticlesRes>
 > =>
-  axios.get(`${import.meta.env.VITE_PUBLIC_APP_SERVER_BASE_URL}/articles`,
+  axios.get(`${import.meta.env.VITE_PUBLIC_APP_SERVER_BASE_URL}/articles?page=${page}`,
     {
       withCredentials: true,
     }

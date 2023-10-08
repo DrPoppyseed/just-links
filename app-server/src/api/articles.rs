@@ -1,11 +1,10 @@
-use axum::extract::State;
-use chrono::{Duration, Utc};
+use axum::extract::{Query, State};
 use futures::TryFutureExt;
 use pockety::{
     models::{ItemAuthor, ItemHas, ItemImage, ItemStatus, ItemVideo, PocketItem, Timestamp},
     Pockety,
 };
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tracing::debug;
 
 use crate::{error::Error, session::AuthzedSessionData, ApiResult, TypedResponse};
@@ -76,6 +75,15 @@ impl From<PocketItem> for Article {
     }
 }
 
+#[derive(Debug, Clone, Deserialize)]
+pub struct Pagination {
+    pub page: u32,
+}
+
+impl Pagination {
+    const PER_PAGE: u32 = 30;
+}
+
 #[derive(Serialize)]
 pub struct GetArticlesResponse {
     articles: Vec<Article>,
@@ -83,15 +91,18 @@ pub struct GetArticlesResponse {
 
 pub async fn get_articles(
     State(pockety): State<Pockety>,
+    pagination: Query<Pagination>,
     session_data: AuthzedSessionData,
 ) -> ApiResult<GetArticlesResponse> {
     const LOG_TAG: &str = "[get_articles]";
 
-    let since = Utc::now() - Duration::days(7);
+    let pagination: Pagination = pagination.0;
+
     pockety
         .retrieve()
         .access_token(session_data.access_token)
-        .since(since)
+        .count(Pagination::PER_PAGE)
+        .offset(Pagination::PER_PAGE * pagination.page)
         .execute()
         .inspect_err(|e| debug!("{LOG_TAG} failed to fetch articles with error: {e:?}"))
         .map_ok(|articles| {

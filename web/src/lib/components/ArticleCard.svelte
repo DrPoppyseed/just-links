@@ -1,6 +1,13 @@
 <script lang="ts">
   import type { Article } from "$lib/types";
   export let article: Article;
+  export let articleNumber: number;
+
+  let imageUrl = article.topImageUrl;
+
+  const fallbackImage = (url: string) => {
+    imageUrl = `https://s2.googleusercontent.com/s2/favicons?domain_url=${url}`;
+  };
 
   // TODO: should probably be handled on the backend
   const formatUrl = (url: string): [string, string] => {
@@ -13,26 +20,30 @@
     ? new Date(article.timeAdded * 1000).toLocaleDateString()
     : null;
 
-  const [url, hostname] =
-    article.resolvedUrl || article.givenUrl
-      ? formatUrl(article.resolvedUrl || article.givenUrl || "")
-      : [null, null];
+  const [url, hostname] = formatUrl(
+    article.resolvedUrl || article.givenUrl || "",
+  );
 </script>
 
-<div class="border-b pt-1 pb-2 flex items-center justify-between space-x-2">
-  <div>
+<article class="w-full py-2 grid grid-cols-[auto,64px] gap-x-2">
+  <div class="self-start">
     <!--Try to display resolved_url and fallback to given_url if null-->
-    <a href={url} class="text-xs text-blue-500">{hostname}</a>
-    <h3><a href={url}>{article.givenTitle}</a></h3>
+
+    <p class="text-sm text-gray-500">
+      {articleNumber}.
+      <a href={url} class="text-sm text-blue-500 break-words">{hostname}</a>
+    </p>
+    <a href={url} class="break-words">{article.givenTitle || hostname}</a>
     {#if article.timeAdded}
       <p class="mt-1 text-sm text-gray-500">{dateAdded}</p>
     {/if}
   </div>
-  {#if article.topImageUrl}
+  {#if imageUrl}
     <img
-      src={article.topImageUrl}
-      alt={article.topImageUrl}
-      class="w-16 h-16 object-cover"
+      src={imageUrl}
+      alt={imageUrl}
+      on:error={() => fallbackImage(url)}
+      class="self-start w-16 h-16 object-cover"
     />
   {/if}
-</div>
+</article>

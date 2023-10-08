@@ -11,12 +11,18 @@ on-release: &on-release
       only:
         - /^v.*/
 
+executors:
+  with-workspace:
+    resource_class: small
+    docker:
+      - image: cimg/base:2023.09
+    working_directory: ~/workspace
+
 jobs:
-  build-and-push:
-    executor: gcp-cli/google
+  build:
+    executor: with-workspace
     steps:
       - checkout
-      - gcp-cli/setup
 
       - run:
           name: Build Docker image
@@ -25,6 +31,22 @@ jobs:
       - run:
           name: Tag Docker image
           command: docker tag jl-app-server:$CIRCLE_TAG asia-northeast1-docker.pkg.dev/just-links-dotdev/jl-app-servers/jl-app-server:$CIRCLE_TAG
+
+      - persist_to_workspace:
+          root: .
+          paths:
+            - app-server
+
+  push:
+    executor: gcp-cli/google
+    working_directory: ~/workspace
+    steps:
+      - attach_workspace:
+          at: ~/workspace
+
+      - checkout
+
+      - gcp-cli/setup
 
       - run:
           name: Push Docker image to GCP Artifact Registry
@@ -35,5 +57,9 @@ jobs:
 workflows:
   build-and-push:
     jobs:
-      - build-and-push:
-          <<: [ *on-release ]
+      - build:
+          <<: [*on-release]
+      - push:
+          requires:
+            - build
+          <<: [*on-release]

@@ -1,0 +1,39 @@
+version: 2.1
+
+orbs:
+  gcp-cli: circleci/gcp-cli@3.1.1
+
+publish-tags: &publish-tags
+  filters:
+    branches:
+      ignore: "/.*/"
+    tags:
+      only:
+        - "/^v\\d+(\\.\\d+){2}$/"
+
+jobs:
+  build-and-push:
+    executor: gcp-cli/google
+    steps:
+      - checkout
+      - gcp-cli/setup
+
+      - run:
+          name: Build Docker image
+          command: docker build -t jl-app-server:$CIRCLE_TAG app-server
+
+      - run:
+          name: Tag Docker image
+          command: docker tag jl-app-server:$CIRCLE_TAG asia-northeast1-docker.pkg.dev/just-links-dotdev/jl-app-servers/jl-app-serve:$CIRCLE_TAG
+
+      - run:
+          name: Push Docker image to GCP Artifact Registry
+          command: |
+            gcloud auth configure-docker asia-northeast1-docker.pkg.dev
+            docker push asia-northeast1-docker.pkg.dev/just-links-dotdev/jl-app-servers/jl-app-serve:$CIRCLE_TAG
+
+workflows:
+  build-and-push:
+    jobs:
+      - build-and-push:
+          <<: [ *publish-tags ]

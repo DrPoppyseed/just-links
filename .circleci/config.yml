@@ -3,13 +3,13 @@ version: 2.1
 orbs:
   gcp-cli: circleci/gcp-cli@3.1.1
 
-publish-tags: &publish-tags
+on-release: &on-release
   filters:
     branches:
-      ignore: "/.*/"
+      ignore: /.*/
     tags:
       only:
-        - "/^v\\d+(\\.\\d+){2}$/"
+        - /^v.*/
 
 jobs:
   build-and-push:
@@ -33,7 +33,7 @@ jobs:
             docker push asia-northeast1-docker.pkg.dev/just-links-dotdev/jl-app-servers/jl-app-server:$CIRCLE_TAG
 
 workflows:
-  build-and-push-to-remote:
+  build-and-push:
     jobs:
       - build-and-push:
-          <<: [ *publish-tags ]
+          <<: [ *on-release ]

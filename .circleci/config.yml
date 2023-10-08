@@ -6,7 +6,7 @@ orbs:
 on-release: &on-release
   filters:
     tags:
-      only: /v.*/
+      only: /.*/
     branches:
       ignore: /.*/
 

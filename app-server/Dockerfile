@@ -7,14 +7,14 @@ RUN cargo chef prepare --recipe-path recipe.json
 
 # Cache project dependencies
 FROM rust:1-bullseye as cacher
+ARG CARGO_FEATURES="--features redis-tls"
 WORKDIR /app
 RUN cargo install cargo-chef
 COPY --from=planner /app/recipe.json recipe.json
-RUN cargo chef cook --release --recipe-path recipe.json
+RUN cargo chef cook --release $CARGO_FEATURES --recipe-path recipe.json
 
 # Build binary
 FROM rust:1-bullseye as builder
-ARG CARGO_FEATURES="--features redis-tls"
 WORKDIR /app
 COPY . .
 # Copy over the cached dependencies from above

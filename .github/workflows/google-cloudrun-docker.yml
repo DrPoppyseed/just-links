@@ -43,11 +43,11 @@ jobs:
       # sqlx need a running instance of postgres at compile time
       - name: Setup Postgres
         run: |-
-          docker run -d --rm -p 5432:5432 -e POSTGRES_PASSWORD=password postgres:16
+          docker run -d --rm -e POSTGRES_PASSWORD=password --name=postgres postgres:16
 
       - name: Build and Push Container
         run: |-
-          DATABASE_URL=postgres://postgres:password@localhost:5432 docker build \
+          DATABASE_URL=postgres://postgres:password@127.0.0.1:5432 docker build \
             -t "${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.SERVICE }}:${{ github.sha }}" \
             --network=host \
             ./app-server/

@@ -3,6 +3,10 @@ name = "app-server"
 version = "0.0.0"
 edition = "2021"
 
+# As recommended by sqlx, to improve the compile time for sqlx macros
+[profile.dev.package.sqlx-macros]
+opt-level = 3
+
 [dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
@@ -39,3 +43,6 @@ sqlx = { version = "0.7", features = [
 ] }
 
 pockety = { git = "https://github.com/DrPoppyseed/pockety.git" }
+
+[features]
+redis-tls=["redis/tls-rustls", "redis/tokio-rustls-comp"]

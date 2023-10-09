@@ -67,16 +67,15 @@ async fn main() {
 
     let postgres_url: String = env::var("DATABASE_URL").expect("Missing DATABASE_URL");
     let postgres_connection_pool = PgPoolOptions::new()
-        .connect(&postgres_url)
-        .await
+        .connect_lazy(&postgres_url)
         .expect("Failed to build postgres connection pool");
     debug!("Initialized Postgres connection pool");
 
-    migrate!("./migrations")
-        .run(&postgres_connection_pool)
-        .await
-        .expect("Failed to migrate database");
-    debug!("Migrated Postgres database");
+    // migrate!("./migrations")
+    //     .run(&postgres_connection_pool)
+    //     .await
+    //     .expect("Failed to migrate database");
+    // debug!("Migrated Postgres database");
 
     let user_agent_url = env::var("USER_AGENT_URL").expect("Missing USER_AGENT_URL");
     let cors_layer = CorsLayer::new()

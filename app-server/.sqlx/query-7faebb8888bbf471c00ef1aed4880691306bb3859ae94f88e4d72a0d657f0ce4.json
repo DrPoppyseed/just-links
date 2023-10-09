@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n    INSERT INTO users (username)\n    VALUES ($1)\n    ON CONFLICT DO NOTHING\n    RETURNING id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Varchar"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "7faebb8888bbf471c00ef1aed4880691306bb3859ae94f88e4d72a0d657f0ce4"
+}

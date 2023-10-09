@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO pocket_article_images (\n                pocket_article_id, \n                item_id, \n                image_id, \n                src,\n                width,\n                height,\n                caption,\n                credit\n            )\n            VALUES (\n                $1,\n                $2,\n                $3,\n                $4,\n                $5,\n                $6,\n                $7,\n                $8\n            )\n            ON CONFLICT (\n                pocket_article_id, \n                item_id, \n                image_id\n            ) \n            DO UPDATE\n            SET \n            src = EXCLUDED.src,\n            width = EXCLUDED.width, \n            height = EXCLUDED.height, \n            caption = EXCLUDED.caption, \n            credit = EXCLUDED.credit\n            RETURNING id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Int4",
+        "Int4",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "4b86967ba1896f347417d8e5944e5dbc6b84001bbc1169c730e13252b7f5889f"
+}

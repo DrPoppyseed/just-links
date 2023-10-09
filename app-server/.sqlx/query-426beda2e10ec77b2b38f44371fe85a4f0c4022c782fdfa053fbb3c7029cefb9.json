@@ -1,0 +1,45 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO pocket_articles (\n                user_id,\n                item_id,\n                resolved_id,\n                given_url,\n                given_title,\n                favorite,\n                status,\n                time_added,\n                time_updated,\n                time_read,\n                time_favorited,\n                sort_id,\n                resolved_url,\n                resolved_title,\n                excerpt,\n                is_article,\n                is_index,\n                has_image,\n                has_video,\n                word_count,\n                lang,\n                time_to_read,\n                listen_duration_estimate,\n                top_image_url\n            )\n            VALUES (\n                $1,\n                $2,\n                $3,\n                $4,\n                $5,\n                $6,\n                $7,\n                $8,\n                $9,\n                $10,\n                $11,\n                $12,\n                $13,\n                $14,\n                $15,\n                $16,\n                $17,\n                $18,\n                $19,\n                $20,\n                $21,\n                $22,\n                $23,\n                $24\n            )\n            ON CONFLICT (\n                user_id,\n                item_id\n            )\n            DO UPDATE \n            SET\n            resolved_id = EXCLUDED.resolved_id,\n            given_url = EXCLUDED.given_url,\n            given_title = EXCLUDED.given_title,\n            favorite = EXCLUDED.favorite,\n            status = EXCLUDED.status,\n            time_added = EXCLUDED.time_added,\n            time_updated = EXCLUDED.time_updated,\n            time_read = EXCLUDED.time_read,\n            time_favorited = EXCLUDED.time_favorited,\n            sort_id = EXCLUDED.sort_id,\n            resolved_url = EXCLUDED.resolved_url,\n            resolved_title = EXCLUDED.resolved_title,\n            excerpt = EXCLUDED.excerpt,\n            is_article = EXCLUDED.is_article,\n            is_index = EXCLUDED.is_index,\n            has_image = EXCLUDED.has_image,\n            has_video = EXCLUDED.has_video,\n            word_count = EXCLUDED.word_count,\n            lang = EXCLUDED.lang,\n            time_to_read = EXCLUDED.time_to_read,\n            listen_duration_estimate = EXCLUDED.listen_duration_estimate,\n            top_image_url = EXCLUDED.top_image_url \n            RETURNING id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Varchar",
+        "Bool",
+        "Int4",
+        "Int8",
+        "Int8",
+        "Int8",
+        "Int8",
+        "Int4",
+        "Varchar",
+        "Varchar",
+        "Text",
+        "Bool",
+        "Bool",
+        "Int4",
+        "Int4",
+        "Int4",
+        "Varchar",
+        "Int4",
+        "Int4",
+        "Varchar"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "426beda2e10ec77b2b38f44371fe85a4f0c4022c782fdfa053fbb3c7029cefb9"
+}

@@ -1,0 +1,25 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO pocket_article_authors (\n                pocket_article_id, \n                author_id, \n                name, \n                url\n            )\n            VALUES (\n                $1,\n                $2,\n                $3,\n                $4\n            )\n            ON CONFLICT (\n                pocket_article_id, \n                author_id\n            ) \n            DO UPDATE\n            SET\n            name = EXCLUDED.name, \n            url = EXCLUDED.url\n            RETURNING id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4",
+        "Varchar",
+        "Varchar",
+        "Varchar"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "dd9be1a4969c51a5538f3880b78a1c6b8a5b6e9629844f8e5b3f3c0b938871e4"
+}

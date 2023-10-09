@@ -43,7 +43,7 @@ jobs:
       # sqlx need a running instance of postgres at compile time
       - name: Setup Postgres
         run: |-
-          docker run -p 5432:5432 -e POSTGRES_PASSWORD=password postgres:16
+          docker run -d --rm -p 5432:5432 -e POSTGRES_PASSWORD=password postgres:16
 
       - name: Build and Push Container
         run: |-

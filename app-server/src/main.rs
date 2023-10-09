@@ -71,11 +71,11 @@ async fn main() {
         .expect("Failed to build postgres connection pool");
     debug!("Initialized Postgres connection pool");
 
-    // migrate!("./migrations")
-    //     .run(&postgres_connection_pool)
-    //     .await
-    //     .expect("Failed to migrate database");
-    // debug!("Migrated Postgres database");
+    migrate!("./migrations")
+        .run(&postgres_connection_pool)
+        .await
+        .expect("Failed to migrate database");
+    debug!("Migrated Postgres database");
 
     let user_agent_url = env::var("USER_AGENT_URL").expect("Missing USER_AGENT_URL");
     let cors_layer = CorsLayer::new()

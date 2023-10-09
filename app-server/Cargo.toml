@@ -45,4 +45,4 @@ bb8-redis = "0.13"
 pockety = { git = "https://github.com/DrPoppyseed/pockety.git" }
 
 [features]
-redis-tls = ["redis/tls-rustls", "redis/tokio-rustls-comp"]
+tls = ["redis/tls-rustls", "redis/tokio-rustls-comp", "sqlx/tls-rustls"]

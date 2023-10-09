@@ -14,7 +14,6 @@ env:
 
 jobs:
   deploy:
-    # Add 'id-token' with the intended permissions for workload identity federation
     permissions:
       contents: "read"
       id-token: "write"
@@ -37,17 +36,22 @@ jobs:
 
     env:
       DATABASE_URL: postgresql://postgres:password@localhost:5432/
+      SCCACHE_GHA_ENABLED: "true"
+      RUSTC_WRAPPER: "sccache"
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Run sccache-cache
+        uses: mozilla-actions/sccache-action@v0.0.3
 
       - name: Setup Database for sqlx
         run: |
           cargo install sqlx-cli --features postgres
           sqlx db setup --source ./app-server/migrations
 
-      - name: Build Container 
+      - name: Build Container
         run: |-
           docker build -t "${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/jl-app-servers/${{ env.SERVICE }}:${{ github.sha }}" ./app-server/
 
@@ -78,6 +82,9 @@ jobs:
           region: ${{ env.REGION }}
           image: ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/jl-app-servers/${{ env.SERVICE }}:${{ github.sha }}
 
-      # If required, use the Cloud Run url output in later steps
       - name: Show Output
         run: echo ${{ steps.deploy.outputs.url }}
+
+      - name: Run sccache stat for check
+        shell: bash
+        run: ${SCCACHE_PATH} --show-stats

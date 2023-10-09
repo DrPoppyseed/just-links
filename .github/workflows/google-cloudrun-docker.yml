@@ -44,7 +44,7 @@ jobs:
       - name: Setup Database for sqlx
         run: |
           cargo install sqlx-cli --features postgres
-          sqlx db setup
+          sqlx db setup --source ./app-server/migrations
 
       - name: Google Auth
         id: auth

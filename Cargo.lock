@@ -1434,7 +1434,7 @@ checksum = "26072860ba924cbfa98ea39c8c19b4dd6a4a25423dbdf219c1eca91aa0cf6964"
 [[package]]
 name = "pockety"
 version = "0.1.0-beta.3"
-source = "git+https://github.com/DrPoppyseed/pockety.git#cdbe21ea95ec9ac4cfe6802d4fd96125ac7cabb2"
+source = "git+https://github.com/DrPoppyseed/pockety.git?tag=v0.1.0-beta.3#cdbe21ea95ec9ac4cfe6802d4fd96125ac7cabb2"
 dependencies = [
  "async-trait",
  "chrono",

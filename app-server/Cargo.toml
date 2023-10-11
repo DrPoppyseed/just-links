@@ -43,9 +43,7 @@ biscuit = "0.6"
 bb8 = "0.8"
 bb8-redis = "0.13"
 
-[dependencies.pockety]
-git = "https://github.com/DrPoppyseed/pockety.git"
-ref = "cdbe21ea95ec9ac4cfe6802d4fd96125ac7cabb2"
+pockety = { git = "https://github.com/DrPoppyseed/pockety.git", tag = "v0.1.0-beta.3" }
 
 [features]
 tls = ["redis/tls-rustls", "redis/tokio-rustls-comp", "sqlx/tls-rustls"]

@@ -53,6 +53,7 @@ pub async fn get_request_token(
         .get_request_token(None)
         .inspect_ok(|r| debug!("{LOG_TAG} got request token from pocket: res: {r:?}"))
         .inspect_err(|e| debug!("{LOG_TAG} failed to get request token from pocket. err: {e}"))
+        .map_ok(|res| res.data)
         .await?;
 
     let csrf_token = generate_csrf_token();
@@ -183,6 +184,7 @@ pub async fn get_access_token(
         .get_access_token(request_token.clone())
         .inspect_ok(|r| debug!("{LOG_TAG} successfully acquired access_token from pocket: {r:?}"))
         .inspect_err(|e| debug!("{LOG_TAG} failed to get access_token from pocket: {e:?}"))
+        .map_ok(|res| res.data)
         .map_err(Error::from)
         .await?;
 

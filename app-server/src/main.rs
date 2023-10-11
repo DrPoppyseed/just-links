@@ -34,7 +34,7 @@ async fn main() {
         .pretty()
         .with_ansi(false)
         .with_max_level(tracing::Level::DEBUG)
-        .with_env_filter("app_server=debug")
+        .with_env_filter("app_server=debug,pockety=debug")
         .compact()
         .init();
 

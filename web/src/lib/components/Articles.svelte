@@ -1,5 +1,6 @@
 <script lang="ts">
   import { PER_PAGE, getArticles } from "$lib/api";
+  import { rateLimits } from "$lib/store";
   import type { Article } from "$lib/types";
   import ArticleCard from "./ArticleCard.svelte";
   import Pagination from "./Pagination.svelte";
@@ -16,7 +17,8 @@
     .then((res) => {
       if (res.status == 200 && res.data) {
         status = "success";
-        articles = res.data.articles;
+        articles = res.data.data.articles;
+        $rateLimits = res.data.rateLimits;
       } else {
         status = "error";
       }

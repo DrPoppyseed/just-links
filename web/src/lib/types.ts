@@ -1,5 +1,12 @@
 import { z } from "zod";
 
+export const rateLimitsSchema = z.object({
+  userLimit: z.number().optional().nullable(),
+  userRemaining: z.number().optional().nullable(),
+  userReset: z.number().optional().nullable(),
+});
+export type RateLimits = z.infer<typeof rateLimitsSchema>;
+
 export const itemImageSchema = z.object({
   itemId: z.string(),
   imageId: z.string(),
@@ -59,7 +66,8 @@ export const apiGetSessionResSchema = z.object({
 export type ApiGetSessionRes = z.infer<typeof apiGetSessionResSchema>;
 
 export const apiGetArticlesResSchema = z.object({
-  articles: articleSchema.array().default([]),
+  data: z.object({ articles: articleSchema.array().default([]) }),
+  rateLimits: rateLimitsSchema
 });
 export type ApiGetArticlesRes = z.infer<typeof apiGetArticlesResSchema>;
 

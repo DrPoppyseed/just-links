@@ -5,9 +5,9 @@ use pockety::{
     Pockety,
 };
 use serde::{Deserialize, Serialize};
-use tracing::debug;
+use tracing::{debug, info};
 
-use crate::{error::Error, session::AuthzedSessionData, ApiResult, TypedResponse};
+use crate::{error::Error, session::AuthzedSessionData, ApiResult, TypedResponse, WithRateLimits};
 
 #[derive(Serialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -93,7 +93,7 @@ pub async fn get_articles(
     State(pockety): State<Pockety>,
     pagination: Query<Pagination>,
     session_data: AuthzedSessionData,
-) -> ApiResult<GetArticlesResponse> {
+) -> ApiResult<WithRateLimits<GetArticlesResponse>> {
     const LOG_TAG: &str = "[get_articles]";
 
     let pagination: Pagination = pagination.0;
@@ -104,15 +104,28 @@ pub async fn get_articles(
         .count(Pagination::PER_PAGE)
         .offset(Pagination::PER_PAGE * pagination.page)
         .execute()
-        .inspect_err(|e| debug!("{LOG_TAG} failed to fetch articles with error: {e:?}"))
-        .map_ok(|articles| {
-            let articles = articles
+        .map_ok(|res| {
+            let rate_limits = res.rate_limits.into();
+            let articles = res
+                .data
                 .into_iter()
                 .map(Article::from)
                 .filter(|article| article.given_title.is_some() && article.given_url.is_some())
-                .collect();
-            TypedResponse::new(Some(GetArticlesResponse { articles }))
+                .collect::<Vec<_>>();
+
+            info!(
+                "{LOG_TAG} fetched {count} articles for user {username}. Current rate limits: {rate_limits:?}",
+                LOG_TAG = LOG_TAG,
+                count = articles.len(),
+                username = session_data.username
+            );
+
+            TypedResponse::new(Some(WithRateLimits {
+                data: GetArticlesResponse { articles },
+                rate_limits
+            }))
         })
+        .inspect_err(|e| debug!("{LOG_TAG} failed to fetch articles with error: {e:?}"))
         .map_err(Error::from)
         .await
 }

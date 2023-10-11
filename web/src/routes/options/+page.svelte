@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { rateLimits } from "./../../lib/store.ts";
   let enableDarkMode: boolean;
   let checkboxes: ReadonlyArray<{
     id: string;
@@ -87,10 +88,39 @@
         <input
           id={checkbox.id}
           type="checkbox"
-          class="self-start"
+          class="justify-self-end mr-2"
           bind:checked={enableDarkMode}
         />
       {/each}
+    </div>
+  </section>
+  <div class="h-px w-full border-t bg-[#E1E1E1] mb-6" />
+  <section class="mb-6">
+    <h2 class="text-xl font-bold mb-4">API Usage</h2>
+    <div class="opacity-50 grid grid-cols-[auto,60px] gap-x-16 gap-y-4">
+      <div class="flex flex-col self-start">
+        <p>User Limit</p>
+        <p class="text-xs">Your current Pocket API rate limit.</p>
+      </div>
+      <div class="justify-self-end mr-2">
+        <p>{$rateLimits.userLimit || "--"}</p>
+      </div>
+      <div class="flex flex-col self-start">
+        <p>User Remaining</p>
+        <p class="text-xs">
+          Number of calls remaining before hitting your Pocket API rate limit.
+        </p>
+      </div>
+      <div class="justify-self-end mr-2">
+        <p>{$rateLimits.userRemaining || "--"}</p>
+      </div>
+      <div class="flex flex-col self-start">
+        <p>User Reset</p>
+        <p class="text-xs">Seconds until your Pocket API rate limit resets.</p>
+      </div>
+      <div class="justify-self-end mr-2">
+        <p>{$rateLimits.userReset || "--"}</p>
+      </div>
     </div>
   </section>
 </div>

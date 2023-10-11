@@ -30,7 +30,7 @@ sqlx = { version = "0.7", features = [
 	"migrate",
 	"chrono",
 	"uuid",
-]}
+] }
 axum = { version = "0.6", features = ["headers", "macros"] }
 axum-extra = { version = "0.8", features = ["cookie"] }
 tower = "0.4"
@@ -42,7 +42,11 @@ deadpool-redis = "0.13.0"
 biscuit = "0.6"
 bb8 = "0.8"
 bb8-redis = "0.13"
-pockety = { git = "https://github.com/DrPoppyseed/pockety.git" }
+
+[dependencies.pockety]
+git = "https://github.com/DrPoppyseed/pockety.git"
+ref = "cdbe21ea95ec9ac4cfe6802d4fd96125ac7cabb2"
 
 [features]
 tls = ["redis/tls-rustls", "redis/tokio-rustls-comp", "sqlx/tls-rustls"]
+pockety-debug = ["pockety/debug"]

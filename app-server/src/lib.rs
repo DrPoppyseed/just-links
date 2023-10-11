@@ -11,8 +11,8 @@ use bb8_redis::RedisConnectionManager;
 use biscuit::{jwk::JWK, jws::Secret};
 use error::Error;
 use oauth::OAuthState;
-use pockety::Pockety;
-use serde::Serialize;
+use pockety::{Pockety, RateLimits as PocketyRateLimits};
+use serde::{Deserialize, Serialize};
 use sqlx::postgres::PgPool;
 
 pub mod api;
@@ -84,6 +84,31 @@ where
         *response.status_mut() = self.status_code;
         response
     }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct RateLimits {
+    pub user_limit: Option<u32>,
+    pub user_remaining: Option<u32>,
+    pub user_reset: Option<u32>,
+}
+
+impl From<PocketyRateLimits> for RateLimits {
+    fn from(limits: PocketyRateLimits) -> Self {
+        Self {
+            user_limit: limits.user_limit,
+            user_remaining: limits.user_remaining,
+            user_reset: limits.user_reset,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct WithRateLimits<T> {
+    pub rate_limits: RateLimits,
+    pub data: T,
 }
 
 #[derive(Clone)]

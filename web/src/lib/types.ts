@@ -63,7 +63,7 @@ export type Article = z.infer<typeof articleSchema>;
 export const apiGetSessionResSchema = z.object({
   username: z.string().optional(),
 });
-export type ApiGetSessionRes = z.infer<typeof apiGetSessionResSchema>;
+export type Session = z.infer<typeof apiGetSessionResSchema>;
 
 export const apiGetArticlesResSchema = z.object({
   data: z.object({ articles: articleSchema.array().default([]) }),

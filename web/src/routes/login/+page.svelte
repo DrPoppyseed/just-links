@@ -27,7 +27,7 @@
     } catch (error) {
       status = "error";
       console.error(
-        `failed to authorize. received response: ${JSON.stringify(error)}`
+        `failed to authorize. received response: ${JSON.stringify(error)}`,
       );
       goto("/login", { replaceState: true });
     }

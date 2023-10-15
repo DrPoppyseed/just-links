@@ -1,5 +1,5 @@
 <script lang="ts">
-  import SignUpButton from "$lib/components/SignUpButton.svelte";
+  import SignUpButton from "../lib/components/SignUpButton.svelte";
 </script>
 
 <div class="py-8 flex flex-col">

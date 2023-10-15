@@ -1,7 +1,7 @@
 <script lang="ts">
-  import Options from "$lib/icons/Options.svelte";
-  import { syncState, session, isLoggingIn } from "$lib/store";
-  import { syncArticlesService } from "$lib/syncArticlesMachine";
+  import Options from "../icons/Options.svelte";
+  import { syncState, session, isLoggingIn } from "../store";
+  import { syncArticlesService } from "../syncArticlesMachine";
 </script>
 
 <header class="top-0 w-full border-b relative">

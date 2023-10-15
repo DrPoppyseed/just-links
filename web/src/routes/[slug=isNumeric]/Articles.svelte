@@ -1,7 +1,7 @@
 <script lang="ts">
-  import { PER_PAGE, getArticles } from "$lib/api";
-  import { rateLimits } from "$lib/store";
-  import type { Article } from "$lib/types";
+  import { PER_PAGE, getArticles } from "../../lib/api";
+  import { rateLimits } from "../../lib/store";
+  import type { Article } from "../../lib/types";
   import ArticleCard from "./ArticleCard.svelte";
   import Pagination from "./Pagination.svelte";
 

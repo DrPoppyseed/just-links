@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { isLoggingIn } from "$lib/store";
-  import { session } from "$lib/store";
+  import { isLoggingIn } from "../lib/store";
+  import { session } from "../lib/store";
   import LandingPage from "./LandingPage.svelte";
-  import Articles from "$lib/components/Articles.svelte";
+  import Articles from "./[slug=isNumeric]/Articles.svelte";
 </script>
 
 <div class="px-8 overflow-hiddenself-start">

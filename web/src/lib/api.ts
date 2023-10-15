@@ -1,5 +1,5 @@
 import axios, { type AxiosResponse } from "axios";
-import type { ApiAuthzRes, ApiGetArticlesRes, ApiGetSessionRes } from "./types";
+import type { ApiAuthzRes, ApiGetArticlesRes, Session } from "./types";
 
 export const authz = async (
   stateParam: Option<string>
@@ -15,7 +15,7 @@ export const authz = async (
   );
 }
 
-export const getSession = async (): Promise<AxiosResponse<ApiGetSessionRes>> =>
+export const getSession = async (): Promise<AxiosResponse<Session>> =>
   axios.get(`${import.meta.env.VITE_PUBLIC_APP_SERVER_BASE_URL}/auth/session`,
     {
       withCredentials: true,

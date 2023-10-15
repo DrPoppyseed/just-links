@@ -1,6 +1,9 @@
 <script lang="ts">
-  import { syncArticlesService } from "$lib/syncArticlesMachine.js";
-  import { syncState, rateLimits } from "$lib/store.js";
+  import { syncArticlesService } from "../../lib/syncArticlesMachine.js";
+  import { syncState, rateLimits } from "../../lib/store.js";
+  import Section from "./Section.svelte";
+  import Divider from "./Divider.svelte";
+
   let enableDarkMode: boolean;
   let checkboxes: ReadonlyArray<{
     id: string;
@@ -105,46 +108,37 @@
 </script>
 
 <div class="flex flex-col p-6">
-  <section class="mb-6">
-    <h2 class="text-xl font-bold mb-4">Metrics</h2>
-    <div>
-      <p class="opacity-50">
-        <span class="font-bold">10%</span>
-        (2 articles read, out of 20 articles saved)
-      </p>
+  <Section title="Metrics">
+    <p class="opacity-50">
+      <span class="font-bold">10%</span>
+      (2 articles read, out of 20 articles saved)
+    </p>
+  </Section>
+  <Divider />
+  <Section title="Actions">
+    <div class="flex flex-col items-start mb-4">
+      <button id="syncDataButton" class="font-bold" on:click={syncArticles}
+        >Sync data</button
+      >
+      <label for="syncDataButton" class="text-xs">
+        Sync all your data from Pocket with Just Links
+      </label>
     </div>
-  </section>
-  <div class="h-px w-full border-t bg-[#E1E1E1] mb-6" />
-  <section class="mb-6">
-    <h2 class="text-xl font-bold mb-4">Actions</h2>
-    <div>
-      <div class="flex flex-col items-start mb-4">
-        <button id="syncDataButton" class="font-bold" on:click={syncArticles}
-          >Sync data</button
-        >
-        <label for="syncDataButton" class="text-xs">
-          Sync all your data from Pocket with Just Links
-        </label>
-      </div>
-      <div class="flex flex-col items-start mb-4 opacity-50">
-        <button id="exportDataButton" class="font-bold" disabled
-          >Export data</button
-        >
-        <label for="exportDataButton" class="text-xs">
-          Download all the links you have saved
-        </label>
-      </div>
-      <div class="flex flex-col items-start opacity-50">
-        <button id="signOutButton" class="font-bold" disabled>Sign out</button>
-        <label for="signOutButton" class="text-xs">
-          peaske16180@gmail.com
-        </label>
-      </div>
+    <div class="flex flex-col items-start mb-4 opacity-50">
+      <button id="exportDataButton" class="font-bold" disabled
+        >Export data</button
+      >
+      <label for="exportDataButton" class="text-xs">
+        Download all the links you have saved
+      </label>
     </div>
-  </section>
-  <div class="h-px w-full border-t bg-[#E1E1E1] mb-6" />
-  <section class="mb-6">
-    <h2 class="text-xl font-bold mb-4">Settings</h2>
+    <div class="flex flex-col items-start opacity-50">
+      <button id="signOutButton" class="font-bold" disabled>Sign out</button>
+      <label for="signOutButton" class="text-xs"> peaske16180@gmail.com </label>
+    </div>
+  </Section>
+  <Divider />
+  <Section title="Settings">
     <div class="opacity-50 grid grid-cols-[auto,40px] gap-x-16 gap-y-4">
       {#each checkboxes as checkbox (checkbox.id)}
         <div class="flex flex-col self-start">
@@ -163,10 +157,9 @@
         />
       {/each}
     </div>
-  </section>
-  <div class="h-px w-full border-t bg-[#E1E1E1] mb-6" />
-  <section class="mb-6">
-    <h2 class="text-xl font-bold mb-4">API Usage</h2>
+  </Section>
+  <Divider />
+  <Section title="API Usage">
     <div class="opacity-50 grid grid-cols-[auto,60px] gap-x-16 gap-y-4">
       <div class="flex flex-col self-start">
         <p>User Limit</p>
@@ -192,7 +185,7 @@
         <p>{$rateLimits.userReset || "--"}</p>
       </div>
     </div>
-  </section>
+  </Section>
 </div>
 
 <style>

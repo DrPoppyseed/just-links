@@ -1,8 +1,9 @@
+use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use futures::TryFutureExt;
 use std::sync::Arc;
 
-use sqlx::PgPool;
+use sqlx::{PgPool, Pool, Postgres};
 use tracing::{error, info};
 
 use crate::{api::articles::Article, domain::User, error::Error};
@@ -70,6 +71,7 @@ pub struct ArticleAuthorModel {
 
 #[derive(Debug, Clone)]
 pub struct UserModel {
+    pub id: i32,
     pub username: String,
     pub user_uuid: String,
     pub created_at: DateTime<Utc>,
@@ -78,12 +80,10 @@ pub struct UserModel {
 
 pub fn convert_article_to_article_model(
     article: Article,
-    user_id: &str,
+    user_id: i32,
 ) -> Result<ArticleModel, Error> {
     let article_model = ArticleModel {
-        user_id: user_id
-            .parse()
-            .map_err(|_| Error::Db("Failed to parse user_id to i32.".to_string()))?,
+        user_id,
         item_id: article.item_id,
         resolved_id: article.resolved_id,
         given_url: article.given_url,
@@ -161,7 +161,7 @@ pub fn convert_article_to_article_video_models(
                 })
                 .collect()
         })
-        .unwrap_or(Vec::new());
+        .unwrap_or_default();
 
     Ok(article_video_model)
 }
@@ -199,7 +199,7 @@ pub fn convert_article_to_article_image_models(
                 })
                 .collect()
         })
-        .unwrap_or(Vec::new());
+        .unwrap_or_default();
 
     Ok(article_image_models)
 }
@@ -221,7 +221,7 @@ pub fn convert_article_to_article_author_models(
                 })
                 .collect()
         })
-        .unwrap_or(Vec::new());
+        .unwrap_or_default();
 
     Ok(article_author_models)
 }
@@ -229,7 +229,7 @@ pub fn convert_article_to_article_author_models(
 pub async fn fetch_user(pool: Arc<PgPool>, username: &str) -> Result<Option<User>, Error> {
     sqlx::query!(
         r#"
-    SELECT user_uuid, username, created_at, updated_at
+    SELECT id, user_uuid, username, created_at, updated_at
     FROM users 
     WHERE username = $1"#,
         username
@@ -237,6 +237,7 @@ pub async fn fetch_user(pool: Arc<PgPool>, username: &str) -> Result<Option<User
     .fetch_optional(&*pool)
     .map_ok(|record| {
         record.map(|record| User {
+            id: record.id,
             uuid: record.user_uuid.to_string(),
             username: record.username,
             created_at: record.created_at.with_timezone(&Utc),
@@ -270,19 +271,33 @@ pub async fn create_new_user_if_not_exists(pool: Arc<PgPool>, username: &str) ->
     Ok(())
 }
 
-pub async fn batch_sync_articles(
-    pool: Arc<PgPool>,
-    user_id: &str,
-    articles: Vec<Article>,
-) -> Result<(), Error> {
-    for article in articles {
-        let article_model = convert_article_to_article_model(article.clone(), user_id)?;
+#[async_trait]
+pub trait ArticleStore {
+    async fn upsert_article(&self, article_model: ArticleModel) -> Result<i32, Error>;
 
-        let user_id: i32 = user_id
-            .parse()
-            .map_err(|_| Error::Db("Failed to parse user_id to i32.".to_string()))?;
+    async fn upsert_article_image(
+        &self,
+        article_id: i32,
+        article_image_model: ArticleImageModel,
+    ) -> Result<i32, Error>;
 
-        let article_id = sqlx::query!(
+    async fn upsert_article_video(
+        &self,
+        article_id: i32,
+        article_video_model: ArticleVideoModel,
+    ) -> Result<i32, Error>;
+
+    async fn upsert_article_author(
+        &self,
+        article_id: i32,
+        article_author_model: ArticleAuthorModel,
+    ) -> Result<i32, Error>;
+}
+
+#[async_trait]
+impl ArticleStore for Arc<Pool<Postgres>> {
+    async fn upsert_article(&self, article_model: ArticleModel) -> Result<i32, Error> {
+        sqlx::query!(
             r#"
             INSERT INTO pocket_articles (
                 user_id,
@@ -365,7 +380,7 @@ pub async fn batch_sync_articles(
             listen_duration_estimate = EXCLUDED.listen_duration_estimate,
             top_image_url = EXCLUDED.top_image_url 
             RETURNING id"#,
-            user_id,
+            article_model.user_id,
             article_model.item_id,
             article_model.resolved_id,
             article_model.given_url,
@@ -390,19 +405,80 @@ pub async fn batch_sync_articles(
             article_model.listen_duration_estimate,
             article_model.top_image_url
         )
-        .fetch_one(&*pool)
+        .fetch_one(&*self.clone())
+        .map_ok(|record| record.id)
         .map_err(|e| {
             error!("Failed to insert articles. Error: {e:?}");
             Error::Db("Failed to insert articles.".to_string())
         })
-        .await?;
+        .await
+    }
 
-        let article_video_models =
-            convert_article_to_article_video_models(article.clone(), article_id.id)?;
+    async fn upsert_article_image(
+        &self,
+        article_id: i32,
+        article_image_model: ArticleImageModel,
+    ) -> Result<i32, Error> {
+        sqlx::query!(
+            r#"
+            INSERT INTO pocket_article_images (
+                pocket_article_id, 
+                item_id, 
+                image_id, 
+                src,
+                width,
+                height,
+                caption,
+                credit
+            )
+            VALUES (
+                $1,
+                $2,
+                $3,
+                $4,
+                $5,
+                $6,
+                $7,
+                $8
+            )
+            ON CONFLICT (
+                pocket_article_id, 
+                item_id, 
+                image_id
+            ) 
+            DO UPDATE
+            SET 
+            src = EXCLUDED.src,
+            width = EXCLUDED.width, 
+            height = EXCLUDED.height, 
+            caption = EXCLUDED.caption, 
+            credit = EXCLUDED.credit
+            RETURNING id"#,
+            article_id,
+            article_image_model.item_id,
+            article_image_model.image_id,
+            article_image_model.src,
+            article_image_model.width,
+            article_image_model.height,
+            article_image_model.caption,
+            article_image_model.credit
+        )
+        .fetch_one(&*self.clone())
+        .map_ok(|record| record.id)
+        .map_err(|e| {
+            error!("Failed to insert article images. Error: {e:?}");
+            Error::Db("Failed to insert article images.".to_string())
+        })
+        .await
+    }
 
-        for article_video_model in article_video_models {
-            let _ = sqlx::query!(
-                r#"
+    async fn upsert_article_video(
+        &self,
+        article_id: i32,
+        article_video_model: ArticleVideoModel,
+    ) -> Result<i32, Error> {
+        sqlx::query!(
+            r#"
             INSERT INTO 
             pocket_article_videos (
                 pocket_article_id,
@@ -437,85 +513,31 @@ pub async fn batch_sync_articles(
             length = EXCLUDED.length, 
             vid = EXCLUDED.vid
             RETURNING id"#,
-                article_id.id,
-                article_video_model.item_id,
-                article_video_model.video_id,
-                article_video_model.src,
-                article_video_model.height,
-                article_video_model.width,
-                article_video_model.length,
-                article_video_model.vid
-            )
-            .fetch_one(&*pool)
-            .map_err(|e| {
-                error!("Failed to insert article videos. Error: {e:?}");
-                Error::Db("Failed to insert article videos.".to_string())
-            })
-            .await?;
-        }
+            article_id,
+            article_video_model.item_id,
+            article_video_model.video_id,
+            article_video_model.src,
+            article_video_model.height,
+            article_video_model.width,
+            article_video_model.length,
+            article_video_model.vid
+        )
+        .fetch_one(&*self.clone())
+        .map_ok(|record| record.id)
+        .map_err(|e| {
+            error!("Failed to insert article videos. Error: {e:?}");
+            Error::Db("Failed to insert article videos.".to_string())
+        })
+        .await
+    }
 
-        let article_image_models =
-            convert_article_to_article_image_models(article.clone(), article_id.id)?;
-
-        for article_image_model in article_image_models {
-            let _ = sqlx::query!(
-                r#"
-            INSERT INTO pocket_article_images (
-                pocket_article_id, 
-                item_id, 
-                image_id, 
-                src,
-                width,
-                height,
-                caption,
-                credit
-            )
-            VALUES (
-                $1,
-                $2,
-                $3,
-                $4,
-                $5,
-                $6,
-                $7,
-                $8
-            )
-            ON CONFLICT (
-                pocket_article_id, 
-                item_id, 
-                image_id
-            ) 
-            DO UPDATE
-            SET 
-            src = EXCLUDED.src,
-            width = EXCLUDED.width, 
-            height = EXCLUDED.height, 
-            caption = EXCLUDED.caption, 
-            credit = EXCLUDED.credit
-            RETURNING id"#,
-                article_id.id,
-                article_image_model.item_id,
-                article_image_model.image_id,
-                article_image_model.src,
-                article_image_model.width,
-                article_image_model.height,
-                article_image_model.caption,
-                article_image_model.credit
-            )
-            .fetch_one(&*pool)
-            .map_err(|e| {
-                error!("Failed to insert article images. Error: {e:?}");
-                Error::Db("Failed to insert article images.".to_string())
-            })
-            .await?;
-        }
-
-        let article_author_models =
-            convert_article_to_article_author_models(article, article_id.id)?;
-
-        for article_author_model in article_author_models {
-            let _ = sqlx::query!(
-                r#"
+    async fn upsert_article_author(
+        &self,
+        article_id: i32,
+        article_author_model: ArticleAuthorModel,
+    ) -> Result<i32, Error> {
+        sqlx::query!(
+            r#"
             INSERT INTO pocket_article_authors (
                 pocket_article_id, 
                 author_id, 
@@ -537,19 +559,17 @@ pub async fn batch_sync_articles(
             name = EXCLUDED.name, 
             url = EXCLUDED.url
             RETURNING id"#,
-                article_id.id,
-                article_author_model.author_id,
-                article_author_model.name,
-                article_author_model.url
-            )
-            .fetch_one(&*pool)
-            .map_err(|e| {
-                error!("Failed to insert article authors. Error: {e:?}");
-                Error::Db("Failed to insert article authors.".to_string())
-            })
-            .await?;
-        }
+            article_id,
+            article_author_model.author_id,
+            article_author_model.name,
+            article_author_model.url
+        )
+        .fetch_one(&*self.clone())
+        .map_ok(|record| record.id)
+        .map_err(|e| {
+            error!("Failed to insert article authors. Error: {e:?}");
+            Error::Db("Failed to insert article authors.".to_string())
+        })
+        .await
     }
-
-    Ok(())
 }

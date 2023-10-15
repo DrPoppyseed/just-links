@@ -75,3 +75,5 @@ export const apiAuthzResSchema = z.object({
   username: z.string().optional(),
 });
 export type ApiAuthzRes = z.infer<typeof apiAuthzResSchema>;
+
+export type CssClasses = string

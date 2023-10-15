@@ -1,13 +1,30 @@
-use axum::extract::{Query, State};
-use futures::TryFutureExt;
+use axum::{
+    extract::{Query, State},
+    response::{
+        sse::{Event, KeepAlive},
+        Sse,
+    },
+};
+use futures::{stream, Stream, StreamExt, TryFutureExt, TryStreamExt};
 use pockety::{
     models::{ItemAuthor, ItemHas, ItemImage, ItemStatus, ItemVideo, PocketItem, Timestamp},
     Pockety,
 };
 use serde::{Deserialize, Serialize};
-use tracing::{debug, info};
+use std::{convert::Infallible, time::Duration};
+// use tokio_stream::StreamExt as _;
+use tracing::{debug, error, info};
 
-use crate::{error::Error, session::AuthzedSessionData, ApiResult, TypedResponse, WithRateLimits};
+use crate::{
+    db::{
+        convert_article_to_article_author_models, convert_article_to_article_image_models,
+        convert_article_to_article_model, convert_article_to_article_video_models, fetch_user,
+        ArticleStore,
+    },
+    error::Error,
+    session::AuthzedSessionData,
+    ApiResult, Store, TypedResponse, WithRateLimits,
+};
 
 #[derive(Serialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -128,4 +145,85 @@ pub async fn get_articles(
         .inspect_err(|e| debug!("{LOG_TAG} failed to fetch articles with error: {e:?}"))
         .map_err(Error::from)
         .await
+}
+
+pub async fn simulate_sync_articles(
+) -> Result<Sse<impl Stream<Item = Result<Event, Infallible>>>, Error> {
+    let ceil = 10;
+    let stream = stream::iter(0..ceil)
+        .enumerate()
+        .then(move |(idx, _)| async move {
+            tokio::time::sleep(Duration::from_millis(500)).await;
+            Ok(Event::default().data(format!("{},{}", idx, ceil)))
+        })
+        .inspect_ok(|event| info!("Published event: {event:?}"))
+        .inspect_err(|e| error!("Failed to publish event: {e:?}"));
+
+    return Ok(Sse::new(stream).keep_alive(KeepAlive::default()));
+}
+
+pub async fn sync_articles(
+    State(pockety): State<Pockety>,
+    State(store): State<Store>,
+    session_data: AuthzedSessionData,
+) -> Result<Sse<impl Stream<Item = Result<Event, Infallible>>>, Error> {
+    const LOG_TAG: &str = "[sync_articles]";
+
+    let user_id: i32 = match fetch_user(store.clone(), &session_data.username).await? {
+        Some(user) => user.id,
+        None => {
+            return Err(Error::Db("User not found!".to_string()));
+        }
+    };
+
+    let articles = pockety
+        .retrieve()
+        .access_token(session_data.access_token)
+        .execute()
+        .map_ok(|res| res.data)
+        .inspect_err(|e| debug!("{LOG_TAG} Failed to fetch articles with error: {e:?}"))
+        .await?;
+
+    let article_len = articles.len();
+
+    let stream = stream::iter(articles)
+        .enumerate()
+        .then(move |(idx, article)| {
+            let store = store.clone();
+            async move {
+                let article = Article::from(article);
+                let article_model =
+                    convert_article_to_article_model(article.clone(), user_id).unwrap();
+                let article_id = store.upsert_article(article_model).await.unwrap();
+
+                let article_video_models =
+                    convert_article_to_article_video_models(article.clone(), article_id).unwrap();
+                for article_video_model in article_video_models {
+                    let _ = store
+                        .upsert_article_video(article_id, article_video_model)
+                        .await;
+                }
+
+                let article_image_models =
+                    convert_article_to_article_image_models(article.clone(), article_id).unwrap();
+                for article_image_model in article_image_models {
+                    let _ = store
+                        .upsert_article_image(article_id, article_image_model)
+                        .await;
+                }
+
+                let article_author_models =
+                    convert_article_to_article_author_models(article, article_id).unwrap();
+                for article_author_model in article_author_models {
+                    let _ = store
+                        .upsert_article_author(article_id, article_author_model)
+                        .await;
+                }
+
+                Ok(Event::default().data(format!("{idx},{article_len}")))
+            }
+        });
+
+    Ok(Sse::new(stream).keep_alive(KeepAlive::default()))
+    // }
 }

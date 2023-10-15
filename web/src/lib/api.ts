@@ -3,8 +3,8 @@ import type { ApiAuthzRes, ApiGetArticlesRes, ApiGetSessionRes } from "./types";
 
 export const authz = async (
   stateParam: Option<string>
-): Promise<AxiosResponse<ApiAuthzRes>> =>
-  axios.post(
+): Promise<AxiosResponse<ApiAuthzRes>> => {
+  return axios.post(
     `${import.meta.env.VITE_PUBLIC_APP_SERVER_BASE_URL}/auth/authz`,
     {
       state: stateParam || null,
@@ -13,6 +13,7 @@ export const authz = async (
       withCredentials: true,
     }
   );
+}
 
 export const getSession = async (): Promise<AxiosResponse<ApiGetSessionRes>> =>
   axios.get(`${import.meta.env.VITE_PUBLIC_APP_SERVER_BASE_URL}/auth/session`,

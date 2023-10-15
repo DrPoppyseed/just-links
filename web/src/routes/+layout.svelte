@@ -1,6 +1,9 @@
 <script lang="ts">
   import "../app.css";
   import SiteHeader from "$lib/components/SiteHeader.svelte";
+  import { getSession } from "$lib/api";
+  import { isLoggingIn, session } from "$lib/store";
+  import { onMount } from "svelte";
 
   let networkStatus: boolean = true;
 
@@ -13,6 +16,24 @@
 
     window.addEventListener("online", handleNetworkChange);
     window.addEventListener("offline", handleNetworkChange);
+  });
+
+  onMount(async () => {
+    try {
+      $isLoggingIn = true;
+      const getSessionRes = await getSession();
+      if (getSessionRes.status == 200 && getSessionRes.data.username) {
+        $session.isLoggedIn = true;
+        $session.username = getSessionRes.data.username;
+      } else {
+        $session.isLoggedIn = false;
+        $session.username = null;
+      }
+    } catch (e) {
+      console.error();
+    } finally {
+      $isLoggingIn = false;
+    }
   });
 </script>
 

@@ -6,14 +6,12 @@ use axum::{
     response::{IntoResponse, Response},
     Json,
 };
-use bb8::Pool;
 use bb8_redis::RedisConnectionManager;
 use biscuit::{jwk::JWK, jws::Secret};
 use error::Error;
 use oauth::OAuthState;
 use pockety::{Pockety, RateLimits as PocketyRateLimits};
 use serde::{Deserialize, Serialize};
-use sqlx::postgres::PgPool;
 
 pub mod api;
 pub mod db;
@@ -25,6 +23,8 @@ pub mod session;
 pub static SESSION_ID_COOKIE_NAME: &str = "ID";
 
 pub type ApiResult<R> = Result<TypedResponse<R>, Error>;
+pub type Store = Arc<sqlx::Pool<sqlx::Postgres>>;
+pub type Cache = Arc<bb8::Pool<RedisConnectionManager>>;
 
 #[derive(Debug, Clone)]
 pub struct TypedResponse<B>
@@ -120,8 +120,8 @@ pub struct Config {
 #[derive(Clone)]
 pub struct AppState {
     pub pockety: Pockety,
-    pub session_store: Arc<Pool<RedisConnectionManager>>,
-    pub db: Arc<PgPool>,
+    pub session_store: Cache,
+    pub db: Store,
     pub config: Config,
 }
 
@@ -137,13 +137,13 @@ impl FromRef<AppState> for Config {
     }
 }
 
-impl FromRef<AppState> for Arc<Pool<RedisConnectionManager>> {
+impl FromRef<AppState> for Cache {
     fn from_ref(state: &AppState) -> Self {
         state.session_store.clone()
     }
 }
 
-impl FromRef<AppState> for Arc<PgPool> {
+impl FromRef<AppState> for Store {
     fn from_ref(state: &AppState) -> Self {
         state.db.clone()
     }

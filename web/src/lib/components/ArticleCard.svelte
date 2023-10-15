@@ -31,7 +31,12 @@
 
     <p class="text-sm text-gray-500">
       {articleNumber}.
-      <a href={url} class="text-sm text-blue-500 break-words">{hostname}</a>
+      <a
+        href={url}
+        target="_blank"
+        rel="noreferrer noopener"
+        class="text-sm text-blue-500 break-words">{hostname}</a
+      >
     </p>
     <a href={url} class="break-words">{article.givenTitle || hostname}</a>
     {#if article.timeAdded}

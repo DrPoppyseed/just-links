@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { rateLimits } from "./../../lib/store.ts";
+  import { syncArticlesService } from "$lib/syncArticlesMachine.js";
+  import { syncState, rateLimits } from "$lib/store.js";
   let enableDarkMode: boolean;
   let checkboxes: ReadonlyArray<{
     id: string;
@@ -36,6 +37,71 @@
         "Sync your articles with pocket every time you refresh the page",
     },
   ];
+
+  let eventMax: number;
+  let eventCur: number;
+
+  const parseEventString = (
+    eventString: string,
+  ): { cur: number; max: number } => {
+    const regex = /data:(\d+),(\d+)\n/;
+    const match = eventString.match(regex);
+
+    if (match) {
+      return {
+        cur: parseInt(match[1], 10),
+        max: parseInt(match[2], 10),
+      };
+    } else {
+      throw new Error("Invalid event string format");
+    }
+  };
+
+  const syncArticles = async () => {
+    try {
+      syncArticlesService.send("sync");
+
+      const response = await fetch(
+        `${
+          import.meta.env.VITE_PUBLIC_APP_SERVER_BASE_URL
+        }/articles/simulated-sync`,
+        {
+          credentials: "include",
+        },
+      );
+
+      if (response.body) {
+        const reader = response.body
+          .pipeThrough(new TextDecoderStream())
+          .getReader();
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+
+          const { cur, max } = parseEventString(value);
+          eventMax = max - 1;
+          eventCur = cur;
+        }
+      }
+      syncArticlesService.send("synced");
+    } catch (e) {
+      syncArticlesService.send("syncFailed");
+      console.error(e);
+    }
+  };
+
+  $: $syncArticlesService.value === "idle" &&
+    (() => {
+      eventMax = 0;
+      eventCur = 0;
+    })();
+
+  $: syncState.update((prev) => ({
+    ...prev,
+    max: eventMax,
+    cur: eventCur,
+  }));
 </script>
 
 <div class="flex flex-col p-6">
@@ -51,21 +117,25 @@
   <div class="h-px w-full border-t bg-[#E1E1E1] mb-6" />
   <section class="mb-6">
     <h2 class="text-xl font-bold mb-4">Actions</h2>
-    <div class="opacity-50">
+    <div>
       <div class="flex flex-col items-start mb-4">
-        <button id="syncDataButton" class="font-bold">Sync data</button>
+        <button id="syncDataButton" class="font-bold" on:click={syncArticles}
+          >Sync data</button
+        >
         <label for="syncDataButton" class="text-xs">
           Sync all your data from Pocket with Just Links
         </label>
       </div>
-      <div class="flex flex-col items-start mb-4">
-        <button id="exportDataButton" class="font-bold">Export data</button>
+      <div class="flex flex-col items-start mb-4 opacity-50">
+        <button id="exportDataButton" class="font-bold" disabled
+          >Export data</button
+        >
         <label for="exportDataButton" class="text-xs">
           Download all the links you have saved
         </label>
       </div>
-      <div class="flex flex-col items-start">
-        <button id="signOutButton" class="font-bold">Sign out</button>
+      <div class="flex flex-col items-start opacity-50">
+        <button id="signOutButton" class="font-bold" disabled>Sign out</button>
         <label for="signOutButton" class="text-xs">
           peaske16180@gmail.com
         </label>

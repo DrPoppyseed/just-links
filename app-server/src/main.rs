@@ -2,7 +2,7 @@ use std::{env, net::SocketAddr, sync::Arc};
 
 use app_server::{
     api::{
-        articles::get_articles,
+        articles::{get_articles, simulate_sync_articles, sync_articles},
         auth::{get_access_token, get_request_token, get_session},
         health_check,
     },
@@ -104,6 +104,8 @@ async fn main() {
     let app = Router::new()
         .route("/health-check", get(health_check))
         .route("/articles", get(get_articles))
+        .route("/articles/sync", get(sync_articles))
+        .route("/articles/simulated-sync", get(simulate_sync_articles))
         .route("/auth/authn", post(get_request_token))
         .route("/auth/authz", post(get_access_token))
         .route("/auth/session", get(get_session))

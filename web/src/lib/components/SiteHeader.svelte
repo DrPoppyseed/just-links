@@ -1,7 +1,9 @@
 <script lang="ts">
   import Options from "../icons/Options.svelte";
-  import { syncState, session, isLoggingIn } from "../store";
+  import { syncState } from "../store";
   import { syncArticlesService } from "../syncArticlesMachine";
+
+  export let isLoggedIn: boolean = false;
 </script>
 
 <header class="top-0 w-full border-b relative">
@@ -14,19 +16,17 @@
       </a>
     </div>
 
-    {#if $session.isLoggedIn}
+    {#if isLoggedIn}
       <a href="/options">
         <Options />
       </a>
-    {:else if !$isLoggingIn}
+    {:else}
       <form
         action={`${import.meta.env.VITE_PUBLIC_APP_SERVER_BASE_URL}/auth/authn`}
         method="POST"
       >
         <button type="submit" class="text-sm">Get started</button>
       </form>
-    {:else}
-      <div />
     {/if}
   </div>
   {#if $syncState.max > 0}

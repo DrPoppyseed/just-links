@@ -1,8 +1,7 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
+  import type { ApiAuthzRes } from "$lib/types";
   import { onMount } from "svelte";
-  import { session } from "$lib/store";
-  import { authz } from "$lib/api";
 
   type FetchStatus = "success" | "loading" | "error";
   let status: FetchStatus = "loading";
@@ -14,11 +13,31 @@
     const stateParam = urlParams.get("state");
 
     try {
-      const authzRes = await authz(stateParam);
+      if (!stateParam) {
+        status = "error";
+        return;
+      }
 
-      if (authzRes.status === 200 && authzRes.data.username) {
-        $session.isLoggedIn = true;
-        $session.username = authzRes.data.username;
+      const authzRes = await fetch(
+        `${import.meta.env.VITE_PUBLIC_APP_SERVER_BASE_URL}/auth/authz`,
+        {
+          method: "POST",
+          body: JSON.stringify({ state: stateParam }),
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          credentials: "include",
+        },
+      ).then((res) => {
+        if (!res.ok) {
+          throw new Error("Failed to authorize.");
+        }
+
+        return res.json() as Promise<ApiAuthzRes>;
+      });
+
+      if (authzRes.username) {
         status = "success";
       } else {
         status = "error";
@@ -26,9 +45,7 @@
       goto("/", { replaceState: true });
     } catch (error) {
       status = "error";
-      console.error(
-        `failed to authorize. received response: ${JSON.stringify(error)}`,
-      );
+      console.error(`Failed to authorize!`);
       goto("/login", { replaceState: true });
     }
   });

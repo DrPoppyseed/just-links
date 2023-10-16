@@ -1,6 +1,8 @@
 <script lang="ts">
   import "../app.css";
   import SiteHeader from "$lib/components/SiteHeader.svelte";
+
+  export let data: PageData;
 </script>
 
 <svelte:head>
@@ -13,7 +15,7 @@
 </svelte:head>
 
 <div class="relative flex min-h-screen flex-col">
-  <SiteHeader />
+  <SiteHeader isLoggedIn={!!data.session?.username} />
   <div class="flex-1">
     <slot />
   </div>

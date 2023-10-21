@@ -24,8 +24,8 @@ jobs:
       - name: Build web frontend
         run: |
           cd web
-          pnpm install
-          pnpm build
+          npm install
+          npm run build
 
       - name: Publish to Cloudflare Pages
         uses: cloudflare/pages-action@v1
@@ -34,5 +34,3 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           projectName: env.PROJECT_NAME
           directory: env.OUTPUT_DIR
-          # Optional: Enable this if you want to have GitHub Deployments triggered
-          gitHubToken: ${{ secrets.GITHUB_TOKEN }}

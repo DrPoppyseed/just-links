@@ -110,7 +110,7 @@ pub async fn get_request_token(
     headers.insert(LOCATION, auth_uri);
 
     Ok(TypedResponse::new(None)
-        .headers(Some(headers))
+        .headers(headers)
         .status_code(StatusCode::SEE_OTHER))
 }
 
@@ -240,7 +240,7 @@ pub async fn get_access_token(
     Ok(TypedResponse::new(Some(GetAccessTokenResponse {
         username: res.username.clone(),
     }))
-    .headers(Some(headers)))
+    .headers(headers))
 }
 
 #[derive(Serialize, Default, Debug, Clone)]

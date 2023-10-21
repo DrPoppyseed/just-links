@@ -1,5 +1,6 @@
 use axum::{
     extract::{Query, State},
+    http::{HeaderMap, HeaderValue},
     response::{
         sse::{Event, KeepAlive},
         Sse,
@@ -137,10 +138,14 @@ pub async fn get_articles(
                 username = session_data.username
             );
 
+            let mut headers = HeaderMap::new();
+            headers.append("cache-control", "max-age=3600".parse::<HeaderValue>().unwrap());
+            headers.append("age", "0".parse::<HeaderValue>().unwrap());
+
             TypedResponse::new(Some(WithRateLimits {
                 data: GetArticlesResponse { articles },
                 rate_limits
-            }))
+            })).headers(headers)
         })
         .inspect_err(|e| debug!("{LOG_TAG} failed to fetch articles with error: {e:?}"))
         .map_err(Error::from)

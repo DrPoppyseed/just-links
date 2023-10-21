@@ -43,12 +43,30 @@ export const load: PageServerLoad = async (
         },
         credentials: "include",
       },
-    ).then((res) => {
-      if (!res.ok) {
-        throw new Error(res.statusText);
-      }
-      return res.json() as Promise<ApiGetArticlesRes>;
-    });
+    )
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error(res.statusText);
+        }
+
+        if (res.headers.get("cache-control")) {
+          event.setHeaders({
+            "cache-control": res.headers.get("cache-control")!,
+          });
+        }
+
+        return res.json() as Promise<ApiGetArticlesRes>;
+      })
+      .then((res): ApiGetArticlesRes => {
+        const articles = res.data.articles.sort((a, b) => {
+          return (a.timeAdded || -1) > (b.timeAdded || -1) ? -1 : 1;
+        });
+
+        return {
+          ...res,
+          data: { articles },
+        };
+      });
 
     return {
       session,

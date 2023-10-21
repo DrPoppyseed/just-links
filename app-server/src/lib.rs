@@ -47,8 +47,11 @@ where
         }
     }
 
-    fn headers(self, headers: Option<HeaderMap>) -> Self {
-        Self { headers, ..self }
+    fn headers(self, headers: HeaderMap) -> Self {
+        Self {
+            headers: Some(headers),
+            ..self
+        }
     }
 
     fn status_code(self, status_code: StatusCode) -> Self {

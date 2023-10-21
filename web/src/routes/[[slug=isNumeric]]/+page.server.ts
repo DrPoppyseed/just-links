@@ -16,6 +16,7 @@ export const load: PageServerLoad = async (
 }> => {
   const { session } = await event.parent();
   const pageNumber = parseInt(event.params.slug || "0");
+  const ID = event.cookies.get("ID");
 
   if (!session?.username) {
     return {
@@ -35,15 +36,19 @@ export const load: PageServerLoad = async (
         import.meta.env.VITE_PUBLIC_APP_SERVER_BASE_URL
       }/articles?page=${pageNumber}`,
       {
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          Cookie: `ID=${ID}`,
+        },
         credentials: "include",
       },
-    )
-      .then((res) => {
-        if (!res.ok) {
-          throw new Error(res.statusText);
-        }
-        return res.json() as Promise<ApiGetArticlesRes>;
-      });
+    ).then((res) => {
+      if (!res.ok) {
+        throw new Error(res.statusText);
+      }
+      return res.json() as Promise<ApiGetArticlesRes>;
+    });
 
     return {
       session,

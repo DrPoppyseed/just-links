@@ -260,6 +260,8 @@ pub async fn get_session(
 ) -> ApiResult<GetSessionResponse> {
     const LOG_TAG: &str = "[get_session]";
 
+    tracing::debug!("{LOG_TAG} cookies: {cookies:?}", cookies = cookies);
+
     let session_cookie = match cookies.get(SESSION_ID_COOKIE_NAME) {
         Some(cookie) => cookie,
         None => return Ok(NOT_AUTHZED_RESPONSE.clone()),

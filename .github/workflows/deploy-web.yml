@@ -6,7 +6,7 @@ on:
       - "web-v[0-9]+.[0-9]+.[0-9]+"
 
 env:
-  PROJECT_NAME: "just-links"
+  PROJECT_NAME: "just-links.dev"
   OUTPUT_DIR: "/web/.svelte-kit/output"
 
 jobs:

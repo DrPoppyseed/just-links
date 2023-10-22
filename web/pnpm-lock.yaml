@@ -35,19 +35,19 @@ devDependencies:
     specifier: ^2.3.3
     version: 2.3.3(@sveltejs/kit@1.26.0)
   '@sveltejs/kit':
-    specifier: ^1.25.2
+    specifier: ^1.26.0
     version: 1.26.0(svelte@4.2.2)(vite@4.5.0)
   '@typescript-eslint/eslint-plugin':
-    specifier: ^6.7.5
+    specifier: ^6.8.0
     version: 6.8.0(@typescript-eslint/parser@6.8.0)(eslint@8.52.0)(typescript@5.2.2)
   '@typescript-eslint/parser':
-    specifier: ^6.7.5
+    specifier: ^6.8.0
     version: 6.8.0(eslint@8.52.0)(typescript@5.2.2)
   autoprefixer:
     specifier: ^10.4.16
     version: 10.4.16(postcss@8.4.31)
   eslint:
-    specifier: ^8.51.0
+    specifier: ^8.52.0
     version: 8.52.0
   eslint-config-prettier:
     specifier: ^9.0.0
@@ -65,7 +65,7 @@ devDependencies:
     specifier: ^3.0.3
     version: 3.0.3(prettier@3.0.3)(svelte@4.2.2)
   svelte:
-    specifier: ^4.2.1
+    specifier: ^4.2.2
     version: 4.2.2
   tailwindcss:
     specifier: ^3.3.3
@@ -77,7 +77,7 @@ devDependencies:
     specifier: ^5.2.2
     version: 5.2.2
   vite:
-    specifier: ^4.4.11
+    specifier: ^4.5.0
     version: 4.5.0
 
 packages:

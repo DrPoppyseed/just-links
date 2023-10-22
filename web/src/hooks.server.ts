@@ -1,7 +1,6 @@
 import type { Session } from "$lib/types";
 import type { Handle } from "@sveltejs/kit";
 
-
 export const handle: Handle = async ({ event, resolve }) => {
   const ID = event.cookies.get("ID");
 
@@ -14,9 +13,9 @@ export const handle: Handle = async ({ event, resolve }) => {
     {
       headers: {
         "Content-Type": "application/json",
-        "Accept": "application/json",
-        "Cookie": `ID=${ID}`
-      },  
+        Accept: "application/json",
+        Cookie: `ID=${ID}`,
+      },
       credentials: "include",
     },
   ).then((res) => {

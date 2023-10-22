@@ -67,7 +67,7 @@ export type Session = z.infer<typeof apiGetSessionResSchema>;
 
 export const apiGetArticlesResSchema = z.object({
   data: z.object({ articles: articleSchema.array().default([]) }),
-  rateLimits: rateLimitsSchema
+  rateLimits: rateLimitsSchema,
 });
 export type ApiGetArticlesRes = z.infer<typeof apiGetArticlesResSchema>;
 
@@ -76,4 +76,4 @@ export const apiAuthzResSchema = z.object({
 });
 export type ApiAuthzRes = z.infer<typeof apiAuthzResSchema>;
 
-export type CssClasses = string
+export type CssClasses = string;

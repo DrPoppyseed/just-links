@@ -37,7 +37,7 @@ const syncArticlesMachine = createMachine({
       },
     },
   },
-  predictableActionArguments: true
+  predictableActionArguments: true,
 });
 
 export const syncArticlesService = interpret(syncArticlesMachine).start();

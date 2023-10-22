@@ -1,8 +1,9 @@
 <script lang="ts">
   import "../app.css";
   import SiteHeader from "$lib/components/SiteHeader.svelte";
+  import type { LayoutData } from "./$types";
 
-  export let data: PageData;
+  export let data: LayoutData;
 </script>
 
 <svelte:head>

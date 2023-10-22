@@ -6,7 +6,7 @@ on:
       - "web-v[0-9]+.[0-9]+.[0-9]+"
 
 env:
-  PROJECT_NAME: "web"
+  PROJECT_NAME: "just-links"
   OUTPUT_DIR: ".svelte-kit/output"
   STORE_PATH: ""
 
@@ -61,6 +61,6 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          projectName: env.PROJECT_NAME
-          directory: env.OUTPUT_DIR
+          projectName: ${{ env.PROJECT_NAME }}
+          directory: ${{ env.OUTPUT_DIR }}
           gitHubToken: ${{ secrets.GITHUB_TOKEN }}

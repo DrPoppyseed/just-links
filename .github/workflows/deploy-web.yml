@@ -15,17 +15,35 @@ jobs:
       contents: read
       deployments: write
 
+    strategy:
+      matrix:
+        node-version: [18]
+
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: |
+          cd ./web
+          pnpm install
+
       - name: Build web frontend
         run: |
-          cd web
-          npm install
-          npm run build
+          pnpm build
 
       - name: Publish to Cloudflare Pages
         uses: cloudflare/pages-action@v1

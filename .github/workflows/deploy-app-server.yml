@@ -6,9 +6,9 @@ on:
       - "app-server-v[0-9]+.[0-9]+.[0-9]+"
 
 env:
-  PROJECT_ID: "just-links-dotdev"
+  PROJECT_ID: "just-links-402802"
   GAR_LOCATION: "asia-northeast1"
-  SERVICE: "jl-app-server"
+  SERVICE: "app-server"
   REGION: "asia-northeast1"
   CARGO_TERM_COLOR: always
 
@@ -25,7 +25,6 @@ jobs:
         image: postgres:16
         env:
           POSTGRES_PASSWORD: password
-        # Set health checks to wait until postgres has started
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -53,7 +52,7 @@ jobs:
 
       - name: Build Container
         run: |-
-          docker build -t "${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/jl-app-servers/${{ env.SERVICE }}:${{ github.sha }}" ./app-server/
+          docker build -t "${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.SERVICE }}/${{ env.SERVICE }}:${{ github.sha }}" ./app-server/
 
       - name: Google Auth
         id: auth
@@ -72,7 +71,7 @@ jobs:
 
       - name: Push Container
         run: |-
-          docker push "${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/jl-app-servers/${{ env.SERVICE }}:${{ github.sha }}"
+          docker push "${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.SERVICE }}/${{ env.SERVICE }}:${{ github.sha }}"
 
       - name: Deploy to Cloud Run
         id: deploy
@@ -80,7 +79,7 @@ jobs:
         with:
           service: ${{ env.SERVICE }}
           region: ${{ env.REGION }}
-          image: ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/jl-app-servers/${{ env.SERVICE }}:${{ github.sha }}
+          image: ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.SERVICE }}/${{ env.SERVICE }}:${{ github.sha }}
 
       - name: Show Output
         run: echo ${{ steps.deploy.outputs.url }}

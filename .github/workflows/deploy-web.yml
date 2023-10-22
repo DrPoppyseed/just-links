@@ -7,7 +7,7 @@ on:
 
 env:
   PROJECT_NAME: "just-links"
-  OUTPUT_DIR: ".svelte-kit/cloudflare"
+  OUTPUT_DIR: "./web/.svelte-kit/cloudflare"
   STORE_PATH: ""
 
 jobs:

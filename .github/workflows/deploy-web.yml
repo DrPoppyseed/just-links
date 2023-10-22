@@ -31,8 +31,8 @@ jobs:
         with:
           node-version: 18
 
-      - uses: pnpm/action-setup@v2
-        name: Install pnpm
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
         with:
           version: 8
           run_install: false
@@ -49,9 +49,6 @@ jobs:
           key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
             ${{ runner.os }}-pnpm-store-
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v2
 
       - name: Install dependencies
         run: pnpm install

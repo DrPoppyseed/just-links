@@ -34,3 +34,4 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           projectName: env.PROJECT_NAME
           directory: env.OUTPUT_DIR
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}

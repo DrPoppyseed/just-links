@@ -55,9 +55,10 @@ jobs:
 
       - name: Build web frontend
         run: |
-          echo 'VITE_PUBLIC_APP_SERVER_BASE_URL="${{ vars.VITE_PUBLIC_APP_SERVER_BASE_URL }}"'
-          echo 'VITE_PUBLIC_USER_AGENT_URL="${{ vars.VITE_PUBLIC_USER_AGENT_URL }}"'
           pnpm build --mode production
+        env:
+          VITE_PUBLIC_APP_SERVER_BASE_URL: ${{ vars.VITE_PUBLIC_APP_SERVER_BASE_URL }}
+          VITE_PUBLIC_USER_AGENT_URL: ${{ vars.VITE_PUBLIC_USER_AGENT_URL }}
 
       - name: Publish to Cloudflare Pages
         uses: cloudflare/pages-action@v1

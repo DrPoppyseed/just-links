@@ -14,11 +14,11 @@
         "Int4",
         "Varchar",
         "Varchar",
-        "Varchar",
+        "Text",
         "Int4",
         "Int4",
         "Int4",
-        "Varchar"
+        "Text"
       ]
     },
     "nullable": [

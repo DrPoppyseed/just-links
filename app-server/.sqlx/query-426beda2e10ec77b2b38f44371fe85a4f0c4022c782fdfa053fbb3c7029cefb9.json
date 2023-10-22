@@ -14,8 +14,8 @@
         "Int4",
         "Varchar",
         "Varchar",
-        "Varchar",
-        "Varchar",
+        "Text",
+        "Text",
         "Bool",
         "Int4",
         "Int8",
@@ -23,8 +23,8 @@
         "Int8",
         "Int8",
         "Int4",
-        "Varchar",
-        "Varchar",
+        "Text",
+        "Text",
         "Text",
         "Bool",
         "Bool",
@@ -34,7 +34,7 @@
         "Varchar",
         "Int4",
         "Int4",
-        "Varchar"
+        "Text"
       ]
     },
     "nullable": [

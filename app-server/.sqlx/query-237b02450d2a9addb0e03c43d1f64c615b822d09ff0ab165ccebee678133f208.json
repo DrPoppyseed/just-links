@@ -1,25 +1,30 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n    SELECT user_uuid, username, created_at, updated_at\n    FROM users \n    WHERE username = $1",
+  "query": "\n    SELECT id, user_uuid, username, created_at, updated_at\n    FROM users \n    WHERE username = $1",
   "describe": {
     "columns": [
       {
         "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
         "name": "user_uuid",
         "type_info": "Uuid"
       },
       {
-        "ordinal": 1,
+        "ordinal": 2,
         "name": "username",
         "type_info": "Varchar"
       },
       {
-        "ordinal": 2,
+        "ordinal": 3,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 3,
+        "ordinal": 4,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
@@ -33,8 +38,9 @@
       false,
       false,
       false,
+      false,
       false
     ]
   },
-  "hash": "91be2a913d6e300cdb67df9ffb67f98a2b196175a4e06e6cdb5f4788d28764f9"
+  "hash": "237b02450d2a9addb0e03c43d1f64c615b822d09ff0ab165ccebee678133f208"
 }

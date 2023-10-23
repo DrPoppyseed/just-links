@@ -9,7 +9,7 @@ use axum::{
     },
     Json, TypedHeader,
 };
-use axum_extra::extract::cookie::{Cookie, Expiration};
+use axum_extra::extract::cookie::{Cookie, Expiration, SameSite};
 use bb8::Pool;
 use bb8_redis::RedisConnectionManager;
 use futures::TryFutureExt;
@@ -230,6 +230,8 @@ pub async fn get_access_token(
             .expires(Expiration::from(
                 OffsetDateTime::now_utc() + Duration::minutes(60),
             ))
+            .secure(true)
+            .same_site(SameSite::None)
             .path("/")
             .finish()
             .to_string()

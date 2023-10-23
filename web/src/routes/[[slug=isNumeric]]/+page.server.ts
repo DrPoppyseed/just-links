@@ -39,7 +39,7 @@ export const load: PageServerLoad = async (
         headers: {
           "Content-Type": "application/json",
           Accept: "application/json",
-          Cookie: `ID=${ID}`,
+          Cookie: `ID=${ID}; SameSite=None; Secure; HttpOnly; Path=/;`,
         },
         credentials: "include",
       },

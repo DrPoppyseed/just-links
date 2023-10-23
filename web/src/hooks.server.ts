@@ -14,7 +14,7 @@ export const handle: Handle = async ({ event, resolve }) => {
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
-        Cookie: `ID=${ID}`,
+        Cookie: `ID=${ID}; SameSite=None; Secure; HttpOnly; Path=/;`,
       },
       credentials: "include",
     },

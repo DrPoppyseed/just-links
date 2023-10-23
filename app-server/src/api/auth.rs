@@ -230,8 +230,6 @@ pub async fn get_access_token(
             .expires(Expiration::from(
                 OffsetDateTime::now_utc() + Duration::minutes(60),
             ))
-            .secure(true)
-            .same_site(SameSite::None)
             .path("/")
             .finish()
             .to_string()
